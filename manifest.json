@@ -3,6 +3,28 @@
   "name": "Jump",
   "version": "0.1.0",
   "description": "Keyboard-driven link navigation with per-site selectors",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jump@knoopx"
+    }
+  },
+  "commands": {
+    "activate-click": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+J"
+      },
+      "description": "Activate click hints"
+    },
+    "activate-focus": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K"
+      },
+      "description": "Activate focus hints"
+    }
+  },
+  "background": {
+    "scripts": ["dist/background.js"]
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

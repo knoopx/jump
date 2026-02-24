@@ -1,23 +1,16 @@
 # Jump
 
-Keyboard-driven hint navigation for websites as a Firefox extension.
-
-## Screenshots
-
-### Group hints by page section
-
-![Group hints](docs/screenshots/hints-groups.png)
-
-### Drill-down hints after selection
-
-![Drill-down hints](docs/screenshots/hints-drilldown.png)
+Vimium-style keyboard-driven hint navigation for websites as a Firefox extension.
 
 ## What it does
 
 - Press `Ctrl+J` to toggle hints on/off.
-- Hints are grouped by selector sections (header/sidebar/main/etc. per site).
-- Type hint keys to narrow and select.
-- If a group is selected, Jump can auto-scroll to that group.
+- Works on any website — no per-site configuration needed.
+- Unique multi-character labels appear on every clickable element.
+- Type characters to filter hints by prefix — matched characters dim.
+- When only one hint matches, the element is clicked automatically.
+- Press `Backspace` to undo the last typed character.
+- Press `Escape` to dismiss hints.
 - Hints are filtered to visible elements in the current viewport.
 
 ## Install (from release)
@@ -56,8 +49,7 @@ bunx web-ext run --source-dir .
 ## Project structure
 
 - `src/content.ts` — key handling + interaction flow
-- `src/hints.ts` — hint creation, grouping, relabeling, viewport filtering
-- `src/selectors.ts` — per-domain selectors grouped by page sections
+- `src/hints.ts` — hint creation, labeling, filtering, viewport detection
 - `manifest.json` — extension manifest
 
 ## Release
@@ -70,8 +62,3 @@ Example:
 jj tag create v0.1.1 -r @
 jj git push --tags
 ```
-
-## Notes
-
-- Selectors are site-specific and should be manually validated against live DOM changes.
-- Dynamic/login-heavy websites may require periodic selector updates.
