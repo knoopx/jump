@@ -1,0 +1,13 @@
+{
+  "name": "jump",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/content.ts --outdir dist --target=browser --format=esm",
+    "dev": "bun run build --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "web-ext": "^9.3.0"
+  }
+}
