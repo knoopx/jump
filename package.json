@@ -10,8 +10,8 @@
     "web-ext": "^9.3.0"
   },
   "scripts": {
-    "build": "bun build src/content.ts src/background.ts --outdir dist --target=browser --format=iife",
-    "dev": "bun build src/content.ts src/background.ts --outdir dist --target=browser --format=iife --watch",
+    "build": "bun build src/content.ts src/background.ts src/detect-listeners.ts src/inject-detect-listeners.ts --outdir dist --target=browser --format=iife",
+    "dev": "bun build src/content.ts src/background.ts src/detect-listeners.ts src/inject-detect-listeners.ts --outdir dist --target=browser --format=iife --watch",
     "package": "web-ext build --overwrite-dest"
   },
   "type": "module"
