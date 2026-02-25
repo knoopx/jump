@@ -302,15 +302,7 @@ function handleBackspace(): void {
 document.addEventListener(
   "keydown",
   (e) => {
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement ||
-      (e.target instanceof HTMLElement && e.target.isContentEditable)
-    ) {
-      return;
-    }
-
-    // Ctrl+Shift+J/K — activate hint mode (or exit focus to re-enter)
+    // Ctrl+Shift+J/K — activate hint mode (always, even in inputs)
     if (
       (e.key === "J" || e.key === "K") &&
       e.ctrlKey &&
@@ -321,6 +313,14 @@ document.addEventListener(
       e.preventDefault();
       e.stopImmediatePropagation();
       handleCommand(e.key === "J" ? "activate-click" : "activate-focus");
+      return;
+    }
+
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement ||
+      (e.target instanceof HTMLElement && e.target.isContentEditable)
+    ) {
       return;
     }
 
