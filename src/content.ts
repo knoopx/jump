@@ -22,20 +22,28 @@ let focusIndex = 0;
 let muteStyle: HTMLStyleElement | null = null;
 let selectorBar: HTMLElement | null = null;
 let highlightedEl: HTMLElement | null = null;
-let highlightPrevOutline = "";
+let highlightPrevStyles = { outline: "", outlineOffset: "", borderRadius: "" };
 
 function highlightAnchor(el: HTMLElement): void {
   removeHighlight();
   highlightedEl = el;
-  highlightPrevOutline = el.style.outline;
-  el.style.outline = "2px solid #a78bfa";
+  highlightPrevStyles = {
+    outline: el.style.outline,
+    outlineOffset: el.style.outlineOffset,
+    borderRadius: el.style.borderRadius,
+  };
+  el.style.outline = "2px solid rgba(167, 139, 250, 1)";
+  el.style.outlineOffset = "16px";
+  el.style.borderRadius = "2px";
 }
 
 function removeHighlight(): void {
   if (highlightedEl) {
-    highlightedEl.style.outline = highlightPrevOutline;
+    highlightedEl.style.outline = highlightPrevStyles.outline;
+    highlightedEl.style.outlineOffset = highlightPrevStyles.outlineOffset;
+    highlightedEl.style.borderRadius = highlightPrevStyles.borderRadius;
     highlightedEl = null;
-    highlightPrevOutline = "";
+    highlightPrevStyles = { outline: "", outlineOffset: "", borderRadius: "" };
   }
 }
 
@@ -94,20 +102,30 @@ function hideBar(): void {
   selectorBar = null;
 }
 
-const MUTE_ATTR = "data-jump-mute-parent";
+const MUTE_ANCESTOR = "data-jump-ancestor";
+const MUTE_PARENT = "data-jump-mute-parent";
 
 function applyMute(): void {
   removeMute();
   const level = currentLevel();
   if (!level) return;
 
-  // Mark parent so we can scope the CSS
-  level.parent.setAttribute(MUTE_ATTR, "");
+  // Mark ancestor chain from body down to (but excluding) parent
+  let node: HTMLElement | null = level.parent.parentElement;
+  while (node && node !== document.documentElement) {
+    node.setAttribute(MUTE_ANCESTOR, "");
+    node = node.parentElement;
+  }
 
+  // Mark parent for sibling dimming
+  level.parent.setAttribute(MUTE_PARENT, "");
+
+  const dimRule = "opacity: 0.15; transition: opacity 0.15s;";
   muteStyle = document.createElement("style");
   muteStyle.textContent = [
-    `body::before { content: ""; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2147483646; pointer-events: none; }`,
-    `[${MUTE_ATTR}] > ${level.selector} { position: relative; z-index: 2147483647; }`,
+    `body > :not([${MUTE_ANCESTOR}]):not([${MUTE_PARENT}]) { ${dimRule} }`,
+    `[${MUTE_ANCESTOR}] > :not([${MUTE_ANCESTOR}]):not([${MUTE_PARENT}]) { ${dimRule} }`,
+    `[${MUTE_PARENT}] > :not(${level.selector}) { ${dimRule} }`,
   ].join("\n");
   document.head.appendChild(muteStyle);
 }
@@ -116,8 +134,11 @@ function removeMute(): void {
   muteStyle?.remove();
   muteStyle = null;
   document
-    .querySelectorAll(`[${MUTE_ATTR}]`)
-    .forEach((el) => el.removeAttribute(MUTE_ATTR));
+    .querySelectorAll(`[${MUTE_ANCESTOR}], [${MUTE_PARENT}]`)
+    .forEach((el) => {
+      el.removeAttribute(MUTE_ANCESTOR);
+      el.removeAttribute(MUTE_PARENT);
+    });
 }
 
 function applyFocusLevel(): void {
@@ -220,6 +241,7 @@ const FOCUS_STYLE = {
 } as const;
 
 function activateHints(m: Mode): void {
+  (document.activeElement as HTMLElement)?.blur();
   typed = "";
   mode = m;
   hints = showHints(m === "focus" ? FOCUS_STYLE : undefined, m === "focus");

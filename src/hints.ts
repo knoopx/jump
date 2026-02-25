@@ -46,7 +46,7 @@ const HINT_STYLE = {
   padding: "0 2px",
   background: "#f5c518",
   color: "#000",
-  fontSize: "9px",
+  fontSize: "12px",
   fontFamily: "monospace",
   fontWeight: "bold",
   lineHeight: "1",
