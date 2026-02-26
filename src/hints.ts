@@ -18,6 +18,7 @@ export const CLICKABLE_SELECTOR = [
   "summary",
   "details > summary",
   "[contenteditable=true]",
+  "[data-jump-has-click]",
 ].join(",");
 
 export function generateLabels(count: number): string[] {
