@@ -403,6 +403,11 @@ document.addEventListener(
         exitFocus();
         return;
       }
+
+      // Swallow all other keys while in focus mode
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
     }
 
     // --- Hint mode keys ---
