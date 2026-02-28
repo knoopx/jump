@@ -1,4 +1,5 @@
 import { type DepthLevel, buildLevels } from "./selectors";
+import { isVisible } from "./visibility";
 
 const FOCUSABLE_SELECTOR = [
   "li",
@@ -15,6 +16,7 @@ const FOCUSABLE_SELECTOR = [
   "dt",
   "dd",
   "blockquote",
+  "img",
 ].join(",");
 
 function hasSameTagSiblings(el: HTMLElement): boolean {
@@ -41,48 +43,6 @@ function hasSharedClasses(el: HTMLElement): boolean {
     if (siblings.every((s) => s.classList.contains(cls))) return true;
   }
   return false;
-}
-
-function deepElementFromPoint(x: number, y: number): Element | null {
-  let current = document.elementFromPoint(x, y);
-  while (current?.shadowRoot) {
-    const inner = current.shadowRoot.elementFromPoint(x, y);
-    if (!inner || inner === current) break;
-    current = inner;
-  }
-  return current;
-}
-
-function isOccluded(el: HTMLElement, rect: DOMRect): boolean {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const hit = deepElementFromPoint(cx, cy);
-  if (!hit) return true;
-  if (el === hit || el.contains(hit) || hit.contains(el)) return false;
-  return true;
-}
-
-function isVisible(el: HTMLElement): boolean {
-  const style = getComputedStyle(el);
-  if (
-    style.display === "none" ||
-    style.visibility === "hidden" ||
-    style.opacity === "0"
-  ) {
-    return false;
-  }
-  const rect = el.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return false;
-  if (
-    rect.top >= window.innerHeight ||
-    rect.bottom <= 0 ||
-    rect.left >= window.innerWidth ||
-    rect.right <= 0
-  ) {
-    return false;
-  }
-  if (isOccluded(el, rect)) return false;
-  return true;
 }
 
 function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
@@ -134,30 +94,52 @@ let focusDepth = -1;
 let focusIndex = 0;
 let muteStyle: HTMLStyleElement | null = null;
 let selectorBar: HTMLElement | null = null;
-let highlightedEl: HTMLElement | null = null;
-let highlightPrevStyles = { outline: "", outlineOffset: "", borderRadius: "" };
+let highlightOverlay: HTMLElement | null = null;
+let highlightTarget: HTMLElement | null = null;
+let onExitCallback: ((target: HTMLElement | null) => void) | null = null;
+
+function positionOverlay(): void {
+  if (!highlightOverlay || !highlightTarget) return;
+  const rect = highlightTarget.getBoundingClientRect();
+  const pad = 16;
+  const top = rect.top + window.scrollY - pad;
+  const left = rect.left + window.scrollX - pad;
+  Object.assign(highlightOverlay.style, {
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${rect.width + pad * 2}px`,
+    height: `${rect.height + pad * 2}px`,
+  });
+}
+
+function onScrollReposition(): void {
+  positionOverlay();
+}
 
 function highlightAnchor(el: HTMLElement): void {
   removeHighlight();
-  highlightedEl = el;
-  highlightPrevStyles = {
-    outline: el.style.outline,
-    outlineOffset: el.style.outlineOffset,
-    borderRadius: el.style.borderRadius,
-  };
-  el.style.outline = "2px solid #a78bfa";
-  el.style.outlineOffset = "16px";
-  el.style.borderRadius = "2px";
+  highlightTarget = el;
+  el.setAttribute("data-jump-focus", "");
+  highlightOverlay = document.createElement("div");
+  Object.assign(highlightOverlay.style, {
+    position: "absolute",
+    border: "2px solid #a78bfa",
+    borderRadius: "4px",
+    pointerEvents: "none",
+    zIndex: "2147483646",
+    boxSizing: "border-box",
+  });
+  document.documentElement.appendChild(highlightOverlay);
+  positionOverlay();
+  window.addEventListener("scroll", onScrollReposition, true);
 }
 
 function removeHighlight(): void {
-  if (highlightedEl) {
-    highlightedEl.style.outline = highlightPrevStyles.outline;
-    highlightedEl.style.outlineOffset = highlightPrevStyles.outlineOffset;
-    highlightedEl.style.borderRadius = highlightPrevStyles.borderRadius;
-    highlightedEl = null;
-    highlightPrevStyles = { outline: "", outlineOffset: "", borderRadius: "" };
-  }
+  window.removeEventListener("scroll", onScrollReposition, true);
+  highlightOverlay?.remove();
+  highlightOverlay = null;
+  highlightTarget?.removeAttribute("data-jump-focus");
+  highlightTarget = null;
 }
 
 export function focusActive(): boolean {
@@ -254,12 +236,58 @@ function applyFocusLevel(): void {
   const level = currentLevel();
   if (!level) return;
   applyMute();
-  highlightAnchor(level.anchor);
   level.anchor.scrollIntoView({ block: "center" });
+  highlightAnchor(level.anchor);
   showBar();
 }
 
-export function enterFocus(el: HTMLElement): void {
+function suppress(e: KeyboardEvent): void {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+}
+
+function onKeyDown(e: KeyboardEvent): void {
+  suppress(e);
+
+  if (e.key === "j" || e.key === "k") {
+    navigate(e.key === "j" ? 1 : -1);
+  } else if (e.key === "d" || e.key === "f") {
+    changeDepth(e.key === "d" ? 1 : -1);
+  } else if (
+    e.key === "ArrowUp" ||
+    e.key === "ArrowDown" ||
+    e.key === "ArrowLeft" ||
+    e.key === "ArrowRight"
+  ) {
+    navigateSpatial(e.key);
+  } else if (e.key === "Enter") {
+    const target = currentAnchor();
+    const cb = onExitCallback;
+    exitFocus();
+    cb?.(target);
+  } else if (e.key === "Escape") {
+    const cb = onExitCallback;
+    exitFocus();
+    cb?.(null);
+  }
+}
+
+function installKeyboardHandlers(): void {
+  window.addEventListener("keydown", onKeyDown, true);
+  window.addEventListener("keyup", suppress, true);
+  window.addEventListener("keypress", suppress, true);
+}
+
+function removeKeyboardHandlers(): void {
+  window.removeEventListener("keydown", onKeyDown, true);
+  window.removeEventListener("keyup", suppress, true);
+  window.removeEventListener("keypress", suppress, true);
+}
+
+export function enterFocus(
+  el: HTMLElement,
+  onExit: (target: HTMLElement | null) => void,
+): void {
   focusLevels = buildLevels(el);
   if (focusLevels.length === 0) {
     const tag = CSS.escape(el.localName);
@@ -274,10 +302,14 @@ export function enterFocus(el: HTMLElement): void {
   }
   focusDepth = 0;
   focusIndex = 0;
+  onExitCallback = onExit;
+  installKeyboardHandlers();
   applyFocusLevel();
 }
 
 export function exitFocus(): void {
+  removeKeyboardHandlers();
+  onExitCallback = null;
   focusLevels = [];
   focusDepth = -1;
   focusIndex = 0;
@@ -287,7 +319,7 @@ export function exitFocus(): void {
   (document.activeElement as HTMLElement)?.blur();
 }
 
-export function navigate(delta: number): void {
+function navigate(delta: number): void {
   const matches = focusMatches();
   if (matches.length === 0) return;
   const level = currentLevel()!;
@@ -295,12 +327,12 @@ export function navigate(delta: number): void {
   const next = idx + delta;
   if (next < 0 || next >= matches.length) return;
   level.anchor = matches[next];
-  highlightAnchor(matches[next]);
   matches[next].scrollIntoView({ block: "center" });
+  highlightAnchor(matches[next]);
   showBar();
 }
 
-export function navigateSpatial(key: string): void {
+function navigateSpatial(key: string): void {
   const matches = focusMatches();
   const level = currentLevel();
   if (!level || matches.length === 0) return;
@@ -335,13 +367,13 @@ export function navigateSpatial(key: string): void {
 
   if (best) {
     level.anchor = best;
-    highlightAnchor(best);
     best.scrollIntoView({ block: "center" });
+    highlightAnchor(best);
     showBar();
   }
 }
 
-export function changeDepth(delta: number): void {
+function changeDepth(delta: number): void {
   const next = focusDepth + delta;
   if (next < 0 || next >= focusLevels.length) return;
   focusDepth = next;
