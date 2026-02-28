@@ -1,6 +1,6 @@
 {
   "name": "jump",
-  "version": "0.1.0",
+  "version": "0.2.3",
   "devDependencies": {
     "cypress": "^15.11.0",
     "typescript": "^5.0.0",
