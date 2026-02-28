@@ -1,13 +1,9 @@
 import { collectClickTargets, simulateClick } from "@/lib/click";
 import {
-  changeDepth,
   collectFocusTargets,
-  currentAnchor,
   enterFocus,
   exitFocus,
   focusActive,
-  navigate,
-  navigateSpatial,
 } from "@/lib/focus";
 import {
   type ActiveHint,
@@ -76,7 +72,10 @@ function handleKey(key: string): void {
     const target = matching[0].element;
     deactivateHints();
     if (mode === "focus") {
-      enterFocus(target);
+      enterFocus(target, (clickTarget) => {
+        syncModeAttr();
+        if (clickTarget) simulateClick(clickTarget);
+      });
       syncModeAttr();
     } else {
       requestAnimationFrame(() => simulateClick(target));
@@ -116,6 +115,11 @@ export default defineContentScript({
       }
     }
 
+    function suppress(e: KeyboardEvent): void {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+
     window.addEventListener(
       "keydown",
       (e) => {
@@ -126,135 +130,55 @@ export default defineContentScript({
           !e.altKey &&
           !e.metaKey
         ) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
+          suppress(e);
           handleCommand(e.key === "J" ? "activate-click" : "activate-focus");
           return;
         }
+
+        if (!hintActive()) return;
 
         const isEditable =
           e.target instanceof HTMLInputElement ||
           e.target instanceof HTMLTextAreaElement ||
           (e.target instanceof HTMLElement && e.target.isContentEditable);
 
-        if (isEditable && !hintActive()) {
-          return;
-        }
-
-        if (focusActive() && !hintActive()) {
-          if (
-            (e.key === "j" || e.key === "k") &&
-            !e.ctrlKey &&
-            !e.altKey &&
-            !e.metaKey
-          ) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            navigate(e.key === "j" ? 1 : -1);
-            return;
-          }
-
-          if (
-            (e.key === "d" || e.key === "f") &&
-            !e.ctrlKey &&
-            !e.altKey &&
-            !e.metaKey
-          ) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            changeDepth(e.key === "d" ? 1 : -1);
-            return;
-          }
-
-          if (
-            (e.key === "ArrowUp" ||
-              e.key === "ArrowDown" ||
-              e.key === "ArrowLeft" ||
-              e.key === "ArrowRight") &&
-            !e.ctrlKey &&
-            !e.altKey &&
-            !e.metaKey
-          ) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            navigateSpatial(e.key);
-            return;
-          }
-
-          if (e.key === "Enter" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            const target = currentAnchor();
-            if (target) {
-              exitFocus();
-              syncModeAttr();
-              simulateClick(target);
-            }
-            return;
-          }
-
-          if (e.key === "Escape") {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            exitFocus();
-            syncModeAttr();
-            return;
-          }
-
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          return;
-        }
-
-        if (!hintActive()) return;
+        if (isEditable) return;
 
         if (e.key === "Escape") {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          pendingKeyups++;
+          suppress(e);
           deactivateHints();
           return;
         }
 
         if (e.key === "Backspace") {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          pendingKeyups++;
+          suppress(e);
           handleBackspace();
           return;
         }
 
         if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          pendingKeyups++;
+          suppress(e);
           handleKey(e.key.toLowerCase());
         }
       },
       true,
     );
 
-    let pendingKeyups = 0;
+    window.addEventListener(
+      "keyup",
+      (e) => {
+        if (hintActive()) suppress(e);
+      },
+      true,
+    );
 
-    function suppressKeyEvent(e: KeyboardEvent): void {
-      if (e.type === "keyup" && pendingKeyups > 0) {
-        pendingKeyups--;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return;
-      }
-      if (!focusActive() && !hintActive()) return;
-      const isEditable =
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target instanceof HTMLElement && e.target.isContentEditable);
-      if (isEditable && !hintActive()) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-    }
-
-    window.addEventListener("keyup", suppressKeyEvent, true);
-    window.addEventListener("keypress", suppressKeyEvent, true);
+    window.addEventListener(
+      "keypress",
+      (e) => {
+        if (hintActive()) suppress(e);
+      },
+      true,
+    );
 
     browser.runtime.onMessage.addListener((msg: { command: string }) => {
       handleCommand(msg.command);
