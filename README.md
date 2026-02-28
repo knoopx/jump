@@ -2,6 +2,20 @@
 
 Vimium-style keyboard-driven hint navigation for websites as a Firefox extension.
 
+## Screenshots
+
+### Click mode (`Ctrl+Shift+J`)
+
+![Click mode](screenshots/click-mode.png)
+
+### Focus mode (`Ctrl+Shift+K`) — hint selection
+
+![Focus hints](screenshots/focus-hints.png)
+
+### Focus mode — navigation with `j`/`k`
+
+![Focus navigation](screenshots/focus-navigation.png)
+
 ## What it does
 
 - Press `Ctrl+J` to toggle hints on/off.

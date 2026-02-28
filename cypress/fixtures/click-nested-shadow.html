@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <app-shell></app-shell>
+
+    <script>
+      class InnerNav extends HTMLElement {
+        constructor() {
+          super();
+          const shadow = this.attachShadow({ mode: "open" });
+          shadow.innerHTML = `
+          <a href="/nested-a" style="display:block">Nested Link A</a>
+          <a href="/nested-b" style="display:block">Nested Link B</a>
+        `;
+        }
+      }
+      customElements.define("inner-nav", InnerNav);
+
+      class AppShell extends HTMLElement {
+        constructor() {
+          super();
+          const shadow = this.attachShadow({ mode: "open" });
+          shadow.innerHTML = `
+          <div>
+            <inner-nav></inner-nav>
+            <a href="/outer" style="display:block">Outer Shadow Link</a>
+          </div>
+        `;
+        }
+      }
+      customElements.define("app-shell", AppShell);
+    </script>
+  </body>
+</html>

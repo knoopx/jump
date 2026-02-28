@@ -2,17 +2,16 @@
   "name": "jump",
   "version": "0.1.0",
   "devDependencies": {
-    "@types/jsdom": "^28.0.0",
-    "happy-dom": "^20.7.0",
-    "jsdom": "^28.1.0",
-    "linkedom": "^0.18.12",
+    "cypress": "^15.11.0",
     "typescript": "^5.0.0",
-    "web-ext": "^9.3.0"
+    "wxt": "^0.20.18"
   },
   "scripts": {
-    "build": "bun build src/content.ts src/background.ts src/detect-listeners.ts src/inject-detect-listeners.ts --outdir dist --target=browser --format=iife",
-    "dev": "bun build src/content.ts src/background.ts src/detect-listeners.ts src/inject-detect-listeners.ts --outdir dist --target=browser --format=iife --watch",
-    "package": "web-ext build --overwrite-dest"
+    "build": "wxt build",
+    "dev": "wxt",
+    "zip": "wxt zip",
+    "cy": "wxt build && cypress run",
+    "cy:open": "wxt build && cypress open"
   },
   "type": "module"
 }

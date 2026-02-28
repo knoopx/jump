@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <div id="root">
+      <ul id="feed">
+        <li class="post" style="padding: 10px; margin: 4px 0">Post one</li>
+        <li class="post" style="padding: 10px; margin: 4px 0">Post two</li>
+        <li class="post" style="padding: 10px; margin: 4px 0">Post three</li>
+        <li class="post" style="padding: 10px; margin: 4px 0">Post four</li>
+      </ul>
+    </div>
+
+    <!-- Same aggressive SPA event handling -->
+    <script>
+      document.addEventListener(
+        "keydown",
+        function reactCaptureHandler(e) {
+          if (window.__reactEventProcessed) return;
+          window.__reactEventProcessed = true;
+          setTimeout(() => {
+            window.__reactEventProcessed = false;
+          }, 0);
+        },
+        true,
+      );
+
+      // Eats single-char keys (j, k, d, f, etc.)
+      document.addEventListener(
+        "keydown",
+        function spaKeyHandler(e) {
+          if (
+            e.key.length === 1 &&
+            !e.ctrlKey &&
+            !e.shiftKey &&
+            !e.altKey &&
+            !e.metaKey
+          ) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        },
+        true,
+      );
+
+      // Eats Escape
+      document.addEventListener(
+        "keydown",
+        function escHandler(e) {
+          if (e.key === "Escape") {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        },
+        true,
+      );
+    </script>
+  </body>
+</html>

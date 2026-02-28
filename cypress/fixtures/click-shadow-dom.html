@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <nav-sidebar></nav-sidebar>
+
+    <script>
+      class NavSidebar extends HTMLElement {
+        constructor() {
+          super();
+          const shadow = this.attachShadow({ mode: "open" });
+          shadow.innerHTML = `
+          <div style="width:200px">
+            <a href="/shadow-a" id="link-a" style="display:block">Shadow Link A</a>
+            <a href="/shadow-b" id="link-b" style="display:block">Shadow Link B</a>
+          </div>
+        `;
+        }
+      }
+      customElements.define("nav-sidebar", NavSidebar);
+    </script>
+  </body>
+</html>

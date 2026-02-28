@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <div id="root">
+      <nav>
+        <a href="/home" style="display: inline-block; width: 80px; height: 20px"
+          >Home</a
+        >
+        <a href="/feed" style="display: inline-block; width: 80px; height: 20px"
+          >Feed</a
+        >
+        <a href="/chat" style="display: inline-block; width: 80px; height: 20px"
+          >Chat</a
+        >
+      </nav>
+      <div id="content">
+        <button style="width: 100px; height: 30px">Like</button>
+        <button style="width: 100px; height: 30px">Share</button>
+        <button style="width: 100px; height: 30px">Save</button>
+        <button style="width: 100px; height: 30px">Report</button>
+        <a href="/p1" style="display: inline-block; width: 80px; height: 20px"
+          >Post 1</a
+        >
+        <a href="/p2" style="display: inline-block; width: 80px; height: 20px"
+          >Post 2</a
+        >
+        <a href="/p3" style="display: inline-block; width: 80px; height: 20px"
+          >Post 3</a
+        >
+        <a href="/p4" style="display: inline-block; width: 80px; height: 20px"
+          >Post 4</a
+        >
+        <a href="/p5" style="display: inline-block; width: 80px; height: 20px"
+          >Post 5</a
+        >
+        <a href="/p6" style="display: inline-block; width: 80px; height: 20px"
+          >Post 6</a
+        >
+        <a href="/p7" style="display: inline-block; width: 80px; height: 20px"
+          >Post 7</a
+        >
+        <a href="/p8" style="display: inline-block; width: 80px; height: 20px"
+          >Post 8</a
+        >
+      </div>
+    </div>
+
+    <!-- Simulate React/SPA aggressive event handling: capture-phase listener
+         registered BEFORE the extension that calls stopImmediatePropagation -->
+    <script>
+      // React-style synthetic event system: captures all events at root
+      const root = document.getElementById("root");
+
+      // Capture-phase listener on document (like React 17+)
+      document.addEventListener(
+        "keydown",
+        function reactCaptureHandler(e) {
+          // React's event system processes the event and may stop propagation
+          if (window.__reactEventProcessed) return;
+          window.__reactEventProcessed = true;
+          setTimeout(() => {
+            window.__reactEventProcessed = false;
+          }, 0);
+        },
+        true,
+      );
+
+      // Some SPAs aggressively stop propagation on certain keys
+      document.addEventListener(
+        "keydown",
+        function spaKeyHandler(e) {
+          // Simulate apps that eat single-char keydown for their own shortcuts
+          if (
+            e.key.length === 1 &&
+            !e.ctrlKey &&
+            !e.shiftKey &&
+            !e.altKey &&
+            !e.metaKey
+          ) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        },
+        true,
+      );
+
+      // Simulate app also listening on root element (like Reddit's feed)
+      root.addEventListener(
+        "keydown",
+        function rootHandler(e) {
+          if (e.key === "Escape") {
+            e.stopImmediatePropagation();
+          }
+        },
+        true,
+      );
+    </script>
+  </body>
+</html>

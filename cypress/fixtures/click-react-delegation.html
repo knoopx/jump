@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <div id="root">
+      <button id="btn-click" style="width: 100px; height: 30px">
+        Click Only
+      </button>
+      <button id="btn-mousedown" style="width: 100px; height: 30px">
+        Mousedown
+      </button>
+      <button id="btn-pointerdown" style="width: 100px; height: 30px">
+        Pointerdown
+      </button>
+      <a
+        href="/nav"
+        id="link-nav"
+        style="display: inline-block; width: 100px; height: 20px"
+        >Navigate</a
+      >
+      <div
+        id="react-btn"
+        role="button"
+        tabindex="0"
+        style="
+          display: inline-block;
+          width: 100px;
+          height: 30px;
+          background: #eee;
+          cursor: pointer;
+        "
+      >
+        React Button
+      </div>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+      var log = document.getElementById("log");
+      function record(name) {
+        log.textContent += name + ",";
+      }
+
+      // Element with only click listener
+      document
+        .getElementById("btn-click")
+        .addEventListener("click", function () {
+          record("btn-click:click");
+        });
+
+      // Element that only responds to mousedown (drag-start style)
+      document
+        .getElementById("btn-mousedown")
+        .addEventListener("mousedown", function () {
+          record("btn-mousedown:mousedown");
+        });
+
+      // Element that only responds to pointerdown (modern pointer API)
+      document
+        .getElementById("btn-pointerdown")
+        .addEventListener("pointerdown", function () {
+          record("btn-pointerdown:pointerdown");
+        });
+
+      // Link with click preventDefault
+      document
+        .getElementById("link-nav")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          record("link-nav:click");
+        });
+
+      // React-style: root-level delegation listening for all event types
+      var root = document.getElementById("root");
+      root.addEventListener("click", function (e) {
+        if (e.target.id === "react-btn") record("react-btn:click");
+      });
+      root.addEventListener("mousedown", function (e) {
+        if (e.target.id === "react-btn") record("react-btn:mousedown");
+      });
+      root.addEventListener("pointerdown", function (e) {
+        if (e.target.id === "react-btn") record("react-btn:pointerdown");
+      });
+      root.addEventListener("mouseup", function (e) {
+        if (e.target.id === "react-btn") record("react-btn:mouseup");
+      });
+      root.addEventListener("pointerup", function (e) {
+        if (e.target.id === "react-btn") record("react-btn:pointerup");
+      });
+    </script>
+  </body>
+</html>

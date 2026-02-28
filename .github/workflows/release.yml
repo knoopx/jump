@@ -23,23 +23,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build extension
-        run: bun run build
-
-      - name: Package installable extension
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
-            VERSION="$(node -p "require('./package.json').version")"
-          fi
-          ASSET_NAME="jump-${VERSION}.xpi"
-          zip -r "$ASSET_NAME" manifest.json dist
-          echo "asset_name=$ASSET_NAME" >> "$GITHUB_OUTPUT"
-        id: package
+      - name: Build and zip extension
+        run: bun run zip
 
       - name: Create GitHub Release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.package.outputs.asset_name }}
+          files: .output/*.xpi
           generate_release_notes: true

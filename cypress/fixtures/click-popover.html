@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <div style="display: flex; gap: 20px; padding: 20px">
+      <a
+        href="/left"
+        id="left"
+        style="display: inline-block; width: 100px; height: 20px"
+        >Left Link</a
+      >
+      <a
+        href="/right"
+        id="right"
+        style="display: inline-block; width: 100px; height: 20px"
+        >Right Link</a
+      >
+    </div>
+
+    <!-- popover covers only the left link -->
+    <div
+      id="popover"
+      style="
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 130px;
+        height: 40px;
+        background: #fff;
+        border: 1px solid #ccc;
+        z-index: 999;
+        padding: 8px;
+      "
+    >
+      <a
+        href="/popover-action"
+        style="display: inline-block; width: 100px; height: 20px"
+        >Popover Action</a
+      >
+    </div>
+  </body>
+</html>
