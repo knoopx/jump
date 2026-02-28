@@ -25,9 +25,7 @@ describe("focus mode", () => {
         cy.pressCtrlShift("K");
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
-          cy.get("li")
-            .first()
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+          cy.get("li").first().should("have.attr", "data-jump-focus");
         });
       });
 
@@ -53,13 +51,9 @@ describe("focus mode", () => {
         cy.pressCtrlShift("K");
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
-          cy.get("li")
-            .eq(0)
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+          cy.get("li").eq(0).should("have.attr", "data-jump-focus");
           cy.pressKey("j");
-          cy.get("li")
-            .eq(1)
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+          cy.get("li").eq(1).should("have.attr", "data-jump-focus");
         });
       });
 
@@ -70,9 +64,7 @@ describe("focus mode", () => {
           cy.pressKey("j");
           cy.pressKey("j");
           cy.pressKey("k");
-          cy.get("li")
-            .eq(1)
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+          cy.get("li").eq(1).should("have.attr", "data-jump-focus");
         });
       });
 
@@ -81,9 +73,7 @@ describe("focus mode", () => {
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
           for (let i = 0; i < 20; i++) cy.pressKey("j");
-          cy.get("li")
-            .last()
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+          cy.get("li").last().should("have.attr", "data-jump-focus");
         });
       });
 
@@ -92,9 +82,7 @@ describe("focus mode", () => {
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
           for (let i = 0; i < 20; i++) cy.pressKey("k");
-          cy.get("li")
-            .first()
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+          cy.get("li").first().should("have.attr", "data-jump-focus");
         });
       });
 
@@ -239,7 +227,7 @@ describe("focus mode", () => {
           cy.typeHintSeq(labels[0]);
           for (let i = 0; i < 10; i++) cy.pressKey("j");
           cy.get("#list2 li").each(($li) => {
-            expect($li[0].style.outline).to.not.include("solid");
+            expect($li[0].hasAttribute("data-jump-focus")).to.be.false;
           });
         });
       });

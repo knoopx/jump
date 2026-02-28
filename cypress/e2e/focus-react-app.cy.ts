@@ -29,11 +29,11 @@ describe("focus mode on aggressive SPA", () => {
           cy.typeHintSeq(labels[0]);
           cy.get("li.post")
             .eq(0)
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+            .should("have.attr", "data-jump-focus");
           cy.pressKey("j");
           cy.get("li.post")
             .eq(1)
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+            .should("have.attr", "data-jump-focus");
         });
       });
 
@@ -45,7 +45,7 @@ describe("focus mode on aggressive SPA", () => {
           cy.pressKey("k");
           cy.get("li.post")
             .eq(0)
-            .should("have.css", "outline", "rgb(167, 139, 250) solid 2px");
+            .should("have.attr", "data-jump-focus");
         });
       });
     });

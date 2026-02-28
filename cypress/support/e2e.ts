@@ -70,10 +70,7 @@ Cypress.Commands.add("selectorBar", () => {
 
 Cypress.Commands.add("highlightedElement", () => {
   return cy.document().then((doc) => {
-    const found =
-      [...doc.querySelectorAll<HTMLElement>("*")].find(
-        (e) => e.style.outline === "2px solid #a78bfa",
-      ) ?? null;
+    const found = doc.querySelector<HTMLElement>("[data-jump-focus]") ?? null;
     return cy.wrap<HTMLElement | null>(found, { log: false });
   });
 });
