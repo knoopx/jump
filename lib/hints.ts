@@ -32,7 +32,7 @@ const HINT_STYLE: Record<string, string> = {
   lineHeight: "1",
   borderRadius: "1px",
   border: "none",
-  boxShadow: "none",
+  boxShadow: "0 0 0 1px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.4)",
   pointerEvents: "none",
   whiteSpace: "nowrap",
 };
