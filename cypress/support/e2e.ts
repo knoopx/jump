@@ -31,7 +31,8 @@ Cypress.Commands.add(
         cancelable: true,
         ...opts,
       });
-      win.document.dispatchEvent(e);
+      const target = win.document.activeElement ?? win.document;
+      target.dispatchEvent(e);
     });
   },
 );

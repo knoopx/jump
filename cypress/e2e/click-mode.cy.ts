@@ -164,6 +164,15 @@ describe("click mode", () => {
         cy.pressCtrlShift("J");
         cy.hintLabels().should("have.length.greaterThan", 0);
       });
+
+      it("then typing a hint selects the target", () => {
+        cy.get("#search").focus();
+        cy.pressCtrlShift("J");
+        cy.hintLabelFor("a[href]").then((label) => {
+          cy.typeHintSeq(label);
+        });
+        cy.hintLabels().should("have.length", 0);
+      });
     });
   });
 

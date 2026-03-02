@@ -173,6 +173,17 @@ export default defineContentScript({
       true,
     );
 
+    window.addEventListener(
+      "beforeinput",
+      (e) => {
+        if (hintActive()) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      },
+      true,
+    );
+
     browser.runtime.onMessage.addListener((msg: { command: string }) => {
       handleCommand(msg.command);
     });
