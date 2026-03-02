@@ -137,13 +137,6 @@ export default defineContentScript({
 
         if (!hintActive()) return;
 
-        const isEditable =
-          e.target instanceof HTMLInputElement ||
-          e.target instanceof HTMLTextAreaElement ||
-          (e.target instanceof HTMLElement && e.target.isContentEditable);
-
-        if (isEditable) return;
-
         if (e.key === "Escape") {
           suppress(e);
           deactivateHints();
