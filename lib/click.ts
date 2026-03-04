@@ -1,15 +1,7 @@
-import { isVisible } from "./visibility";
-
-function hasPointerChild(el: HTMLElement): boolean {
-  for (const child of el.querySelectorAll<HTMLElement>("*")) {
-    if (getComputedStyle(child).cursor === "pointer") return true;
-  }
-  return false;
-}
+import { rectIntersectsViewport, isVisible } from "./visibility";
 
 export function collectClickTargets(): HTMLElement[] {
-  const seen = new Set<HTMLElement>();
-  const elements: HTMLElement[] = [];
+  const pointerElements: HTMLElement[] = [];
 
   function walk(root: Document | ShadowRoot | Element): void {
     const searchRoot = root instanceof Element ? root.shadowRoot : root;
@@ -17,16 +9,33 @@ export function collectClickTargets(): HTMLElement[] {
 
     for (const el of searchRoot.querySelectorAll<HTMLElement>("*")) {
       if (el.shadowRoot) walk(el);
-      if (seen.has(el)) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      if (!rectIntersectsViewport(rect)) continue;
       if (getComputedStyle(el).cursor !== "pointer") continue;
-      if (hasPointerChild(el)) continue;
-      if (!isVisible(el)) continue;
-      seen.add(el);
-      elements.push(el);
+      pointerElements.push(el);
     }
   }
 
   walk(document);
+
+  const hasPointerDescendant = new Set<HTMLElement>();
+  for (const el of pointerElements) {
+    let parent = el.parentElement;
+    while (parent) {
+      if (hasPointerDescendant.has(parent)) break;
+      hasPointerDescendant.add(parent);
+      parent = parent.parentElement;
+    }
+  }
+
+  const elements: HTMLElement[] = [];
+  for (const el of pointerElements) {
+    if (hasPointerDescendant.has(el)) continue;
+    if (!isVisible(el)) continue;
+    elements.push(el);
+  }
+
   return elements;
 }
 

@@ -118,7 +118,6 @@ function clampToViewport(
 
 function createHintElement(
   label: string,
-  rect: DOMRect,
   styleOverride?: Record<string, string>,
 ): HTMLElement {
   const hint = document.createElement("div");
@@ -133,19 +132,19 @@ function createHintElement(
     left: "-9999px",
     top: "-9999px",
   });
-  document.documentElement.appendChild(hint);
-  const w = hint.offsetWidth;
-  const h = hint.offsetHeight;
-  hint.remove();
+  return hint;
+}
 
+function positionHintElement(
+  hint: HTMLElement,
+  rect: DOMRect,
+  w: number,
+  h: number,
+): void {
   const gravity = pickGravity(rect, w, h);
   const pos = clampToViewport(positionForGravity(gravity, rect, w, h), w, h);
-
-  Object.assign(hint.style, {
-    left: `${pos.left + window.scrollX}px`,
-    top: `${pos.top + window.scrollY}px`,
-  });
-  return hint;
+  hint.style.left = `${pos.left + window.scrollX}px`;
+  hint.style.top = `${pos.top + window.scrollY}px`;
 }
 
 function updateHintDisplay(
@@ -220,26 +219,36 @@ export function showHints(
 ): ActiveHint[] {
   const labels = generateLabels(elements.length);
   const overlays: HTMLElement[] = [];
-  const positions: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  }[] = [];
+  const rects: DOMRect[] = [];
 
+  // batch DOM write: create all overlays offscreen
   for (let i = 0; i < elements.length; i++) {
-    const rect = elements[i].getBoundingClientRect();
-    const overlay = createHintElement(labels[i], rect, styleOverride);
-    overlays.push(overlay);
-
+    rects.push(elements[i].getBoundingClientRect());
+    const overlay = createHintElement(labels[i], styleOverride);
     document.documentElement.appendChild(overlay);
-    const left = parseFloat(overlay.style.left) || 0;
-    const top = parseFloat(overlay.style.top) || 0;
-    const width = overlay.offsetWidth;
-    const height = overlay.offsetHeight;
-    overlay.remove();
-    positions.push({ left, top, width, height });
+    overlays.push(overlay);
   }
+
+  // single reflow: read all sizes at once
+  const sizes = overlays.map((o) => ({
+    width: o.offsetWidth,
+    height: o.offsetHeight,
+  }));
+
+  // remove from DOM before repositioning
+  for (const o of overlays) o.remove();
+
+  // compute positions (no DOM access)
+  for (let i = 0; i < overlays.length; i++) {
+    positionHintElement(overlays[i], rects[i], sizes[i].width, sizes[i].height);
+  }
+
+  const positions = overlays.map((o, i) => ({
+    left: parseFloat(o.style.left) || 0,
+    top: parseFloat(o.style.top) || 0,
+    width: sizes[i].width,
+    height: sizes[i].height,
+  }));
 
   deCollide(positions);
 

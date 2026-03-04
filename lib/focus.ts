@@ -1,5 +1,5 @@
 import { type DepthLevel, buildLevels } from "./selectors";
-import { isVisible } from "./visibility";
+import { rectIntersectsViewport, isVisible } from "./visibility";
 
 const FOCUSABLE_SELECTOR = [
   "li",
@@ -56,11 +56,14 @@ function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
     results.push(el);
   }
 
-  for (const el of root.querySelectorAll<HTMLElement>("*")) {
+  for (const el of root.querySelectorAll<HTMLElement>("div, :defined")) {
     if (seen.has(el)) continue;
     const isCustom = el.localName.includes("-");
     const isDiv = el.localName === "div";
     if (!isCustom && !isDiv) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+    if (!rectIntersectsViewport(rect)) continue;
     if (isDiv && !(hasSameTagSiblings(el) && hasSharedClasses(el))) continue;
     if (isCustom && !hasSameTagSiblings(el)) continue;
     seen.add(el);

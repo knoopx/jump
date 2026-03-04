@@ -192,19 +192,18 @@ describe("hint typing on focused input", () => {
 
   describe("given beforeinput suppression with input focused", () => {
     describe("when typing hint characters", () => {
-      it("then beforeinput events are cancelled during hint mode", () => {
+      it("then beforeinput events do not reach the input", () => {
         cy.get("#text-input").focus();
         cy.window().then((win) => {
-          let beforeInputFired = false;
+          let reachedInput = false;
           win.document
             .getElementById("text-input")!
             .addEventListener("beforeinput", () => {
-              beforeInputFired = true;
+              reachedInput = true;
             });
 
           cy.pressCtrlShift("J");
           cy.hintLabels().then((labels) => {
-            // Dispatch an InputEvent to simulate real browser beforeinput
             const inputEvent = new win.InputEvent("beforeinput", {
               data: labels[0][0],
               inputType: "insertText",
@@ -217,7 +216,7 @@ describe("hint typing on focused input", () => {
               .dispatchEvent(inputEvent);
 
             cy.wrap(null).then(() => {
-              expect(beforeInputFired).to.be.true;
+              expect(reachedInput).to.be.false;
               cy.get("#text-input").should("have.value", "");
             });
           });
