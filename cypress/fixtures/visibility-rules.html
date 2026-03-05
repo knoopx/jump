@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      a {
+        display: inline-block;
+        width: 100px;
+        height: 20px;
+        cursor: pointer;
+      }
+      .offscreen {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+      }
+      .collapsed-parent {
+        display: none;
+      }
+      .invisible-parent {
+        visibility: hidden;
+      }
+      .transparent-parent {
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- === VISIBLE: should get hints === -->
+    <a href="/visible" id="visible">Visible</a>
+    <a href="/opacity-half" id="opacity-half" style="opacity: 0.5"
+      >Half opacity</a
+    >
+    <a
+      href="/opacity-almost-zero"
+      id="opacity-almost-zero"
+      style="opacity: 0.01"
+      >Almost zero</a
+    >
+    <a
+      href="/visibility-visible"
+      id="visibility-visible"
+      style="visibility: visible"
+      >Explicitly visible</a
+    >
+
+    <!-- visible child inside invisible parent (visibility inherits but can be overridden) -->
+    <div class="invisible-parent" id="invisible-parent-override">
+      <a
+        href="/vis-child-override"
+        id="vis-child-override"
+        style="
+          visibility: visible;
+          display: inline-block;
+          width: 100px;
+          height: 20px;
+        "
+        >Override visible</a
+      >
+    </div>
+
+    <!-- === HIDDEN: display:none === -->
+    <a href="/display-none" id="display-none" style="display: none"
+      >Display none</a
+    >
+    <div class="collapsed-parent" id="display-none-parent">
+      <a href="/display-none-child" id="display-none-child"
+        >Child of display none</a
+      >
+    </div>
+    <a
+      href="/display-none-inline"
+      id="display-none-inline"
+      style="display: none !important"
+      >Display none important</a
+    >
+
+    <!-- === HIDDEN: visibility:hidden === -->
+    <a
+      href="/visibility-hidden"
+      id="visibility-hidden"
+      style="
+        visibility: hidden;
+        display: inline-block;
+        width: 100px;
+        height: 20px;
+      "
+      >Visibility hidden</a
+    >
+    <div class="invisible-parent" id="visibility-hidden-parent">
+      <a
+        href="/visibility-hidden-child"
+        id="visibility-hidden-child"
+        style="display: inline-block; width: 100px; height: 20px"
+        >Inherits hidden</a
+      >
+    </div>
+
+    <!-- === HIDDEN: opacity:0 === -->
+    <a href="/opacity-zero" id="opacity-zero" style="opacity: 0"
+      >Opacity zero</a
+    >
+    <div class="transparent-parent" id="opacity-zero-parent">
+      <a
+        href="/opacity-zero-child"
+        id="opacity-zero-child"
+        style="display: inline-block; width: 100px; height: 20px"
+        >Child of opacity 0</a
+      >
+    </div>
+
+    <!-- === HIDDEN: zero dimensions === -->
+    <a
+      href="/zero-width"
+      id="zero-width"
+      style="display: block; width: 0; height: 20px; overflow: hidden"
+      >Zero width</a
+    >
+    <a
+      href="/zero-height"
+      id="zero-height"
+      style="display: block; width: 100px; height: 0; overflow: hidden"
+      >Zero height</a
+    >
+    <a
+      href="/zero-both"
+      id="zero-both"
+      style="display: block; width: 0; height: 0; overflow: hidden"
+      >Zero both</a
+    >
+
+    <!-- === HIDDEN: offscreen === -->
+    <a href="/offscreen" id="offscreen" class="offscreen">Offscreen</a>
+
+    <!-- === HIDDEN: clip-path (still has size, but isOccluded catches via elementFromPoint) === -->
+    <a
+      href="/clip-path"
+      id="clip-path"
+      style="
+        clip-path: inset(100%);
+        display: inline-block;
+        width: 100px;
+        height: 20px;
+      "
+      >Clip path</a
+    >
+
+    <!-- === HIDDEN: overflow hidden with zero-size container === -->
+    <div id="overflow-container" style="width: 0; height: 0; overflow: hidden">
+      <a
+        href="/overflow-child"
+        id="overflow-child"
+        style="display: inline-block; width: 100px; height: 20px"
+        >Overflow hidden child</a
+      >
+    </div>
+  </body>
+</html>

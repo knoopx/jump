@@ -12,7 +12,8 @@ describe("click mode on aggressive SPA", () => {
     describe("when activating with Ctrl+Shift+J", () => {
       it("then shows hint overlays", () => {
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 11);
+        // 11 links + 4 buttons = 15 clickable elements
+        cy.hintLabels().should("have.length", 15);
       });
     });
 
@@ -40,7 +41,7 @@ describe("click mode on aggressive SPA", () => {
     describe("when pressing Escape that the page tries to eat", () => {
       it("then deactivates hints", () => {
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 11);
+        cy.hintLabels().should("have.length", 15);
         cy.pressKey("Escape");
         cy.hintLabels().should("have.length", 0);
       });
@@ -49,7 +50,7 @@ describe("click mode on aggressive SPA", () => {
     describe("when pressing Backspace with no typed characters", () => {
       it("then deactivates hints", () => {
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 11);
+        cy.hintLabels().should("have.length", 15);
         cy.pressKey("Backspace");
         cy.hintLabels().should("have.length", 0);
       });

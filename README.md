@@ -2,6 +2,8 @@
 
 Vimium-style keyboard-driven hint navigation for websites as a Firefox extension.
 
+Re-implemented based on [vimium-c](https://github.com/gdh1995/vimium-c) for comprehensive clickable element detection.
+
 ## Screenshots
 
 ### Click mode (`Ctrl+Shift+J`)
@@ -18,14 +20,16 @@ Vimium-style keyboard-driven hint navigation for websites as a Firefox extension
 
 ## What it does
 
-- Press `Ctrl+J` to toggle hints on/off.
+- Press `Ctrl+Shift+J` to activate click hints on all clickable elements.
+- Press `Ctrl+Shift+K` to activate focus hints for navigating lists and sections.
 - Works on any website — no per-site configuration needed.
+- Detects links, buttons, inputs, and other interactive elements (not just `cursor: pointer`).
 - Unique multi-character labels appear on every clickable element.
 - Type characters to filter hints by prefix — matched characters dim.
 - When only one hint matches, the element is clicked automatically.
 - Press `Backspace` to undo the last typed character.
 - Press `Escape` to dismiss hints.
-- Hints are filtered to visible elements in the current viewport.
+- Hints are filtered to visible, non-occluded elements in the current viewport.
 
 ## Install (from release)
 
@@ -57,14 +61,35 @@ bun run build
 ### Run in Firefox (temporary add-on)
 
 ```bash
-bunx web-ext run --source-dir .
+bunx web-ext run --source-dir .output/firefox-mv2
+```
+
+### Run tests
+
+```bash
+bun run cy
 ```
 
 ## Project structure
 
-- `src/content.ts` — key handling + interaction flow
-- `src/hints.ts` — hint creation, labeling, filtering, viewport detection
-- `manifest.json` — extension manifest
+- `entrypoints/content.ts` — key handling + interaction flow
+- `lib/click.ts` — clickable element detection (vimium-c style)
+- `lib/focus.ts` — focus mode navigation with depth levels
+- `lib/hints.ts` — hint creation, labeling, filtering, positioning
+- `lib/visibility.ts` — visibility and occlusion detection
+- `lib/selectors.ts` — CSS selector building for focus navigation
+
+## Key bindings
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+Shift+J` | Activate click hints |
+| `Ctrl+Shift+K` | Activate focus hints |
+| `a-z` | Type hint characters to filter/select |
+| `Backspace` | Undo last typed character |
+| `Escape` | Dismiss hints |
+| `j`/`k` | Navigate in focus mode |
+| `d`/`f` | Change depth in focus mode |
 
 ## Release
 

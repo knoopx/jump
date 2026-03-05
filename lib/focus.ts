@@ -49,25 +49,29 @@ function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
   const seen = new Set<HTMLElement>();
   const results: HTMLElement[] = [];
 
-  for (const el of root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)) {
-    if (seen.has(el)) continue;
-    if (!hasSameTagSiblings(el)) continue;
-    seen.add(el);
-    results.push(el);
-  }
+  try {
+    for (const el of root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)) {
+      if (seen.has(el)) continue;
+      if (!hasSameTagSiblings(el)) continue;
+      seen.add(el);
+      results.push(el);
+    }
 
-  for (const el of root.querySelectorAll<HTMLElement>("div, :defined")) {
-    if (seen.has(el)) continue;
-    const isCustom = el.localName.includes("-");
-    const isDiv = el.localName === "div";
-    if (!isCustom && !isDiv) continue;
-    const rect = el.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) continue;
-    if (!rectIntersectsViewport(rect)) continue;
-    if (isDiv && !(hasSameTagSiblings(el) && hasSharedClasses(el))) continue;
-    if (isCustom && !hasSameTagSiblings(el)) continue;
-    seen.add(el);
-    results.push(el);
+    for (const el of root.querySelectorAll<HTMLElement>("div, :defined")) {
+      if (seen.has(el)) continue;
+      const isCustom = el.localName.includes("-");
+      const isDiv = el.localName === "div";
+      if (!isCustom && !isDiv) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      if (!rectIntersectsViewport(rect)) continue;
+      if (isDiv && !(hasSameTagSiblings(el) && hasSharedClasses(el))) continue;
+      if (isCustom && !hasSameTagSiblings(el)) continue;
+      seen.add(el);
+      results.push(el);
+    }
+  } catch (err) {
+    console.warn("Jump: Error collecting focus targets:", err);
   }
 
   return results;
@@ -76,17 +80,21 @@ function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
 export function collectFocusTargets(): HTMLElement[] {
   const elements: HTMLElement[] = [];
 
-  for (const el of collectTargetsFromRoot(document)) {
-    if (isVisible(el)) elements.push(el);
-  }
+  try {
+    for (const el of collectTargetsFromRoot(document)) {
+      if (isVisible(el)) elements.push(el);
+    }
 
-  for (const el of document.querySelectorAll("*")) {
-    if (el.shadowRoot) {
-      for (const target of collectTargetsFromRoot(el.shadowRoot)) {
-        if (isVisible(target) && !elements.includes(target))
-          elements.push(target);
+    for (const el of document.querySelectorAll("*")) {
+      if (el.shadowRoot) {
+        for (const target of collectTargetsFromRoot(el.shadowRoot)) {
+          if (isVisible(target) && !elements.includes(target))
+            elements.push(target);
+        }
       }
     }
+  } catch (err) {
+    console.warn("Jump: Error collecting focus targets from document:", err);
   }
 
   return elements;

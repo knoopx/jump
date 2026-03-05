@@ -8,14 +8,16 @@ describe("click mode occlusion", () => {
     describe("when activating click mode", () => {
       it("then shows hints only on modal elements, not occluded background ones", () => {
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 1);
+        // Modal has 1 link + 1 button = 2 clickable elements
+        cy.hintLabels().should("have.length", 2);
       });
 
-      it("then the visible hint corresponds to the modal link", () => {
+      it("then the visible hints correspond to modal link and button", () => {
         cy.pressCtrlShift("J");
         cy.hintLabels().then((labels) => {
-          expect(labels.length).to.eq(1);
+          expect(labels.length).to.eq(2);
           cy.get("#modal a").should("exist");
+          cy.get("#modal button").should("exist");
         });
       });
     });
@@ -24,7 +26,8 @@ describe("click mode occlusion", () => {
       it("then shows hints on the previously occluded background elements", () => {
         cy.get("#overlay").invoke("remove");
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 1);
+        // Background has 1 link + 1 button = 2 clickable elements
+        cy.hintLabels().should("have.length", 2);
       });
     });
   });
@@ -62,12 +65,18 @@ describe("click mode occlusion", () => {
     describe("when activating click mode", () => {
       it("then shows hints on visible clickable elements", () => {
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 1);
+        // Top link + accept button = 2 visible clickable elements
+        cy.hintLabels().should("have.length", 2);
       });
 
       it("then does not hint the footer link behind the banner", () => {
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 1);
+        cy.hintLabels().then((labels) => {
+          // Should have 2 hints (top link + accept button), not 3
+          expect(labels.length).to.eq(2);
+          // Verify footer link is not hinted
+          cy.get("#accept").should("exist");
+        });
       });
     });
   });

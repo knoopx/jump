@@ -42,7 +42,7 @@ describe("hint typing on focused input", () => {
 
       it("then completing a label triggers click and clears hints", () => {
         cy.pressCtrlShift("J");
-        cy.hintLabels().then((labels) => {
+        cy.hintLabelFor("a").then((linkLabel) => {
           cy.get("a")
             .first()
             .then(($el) => {
@@ -51,7 +51,7 @@ describe("hint typing on focused input", () => {
                 e.preventDefault();
                 clicked = true;
               });
-              cy.typeHintSeq(labels[0]);
+              cy.typeHintSeq(linkLabel);
               cy.wait(50).then(() => {
                 expect(clicked).to.be.true;
               });

@@ -6,5 +6,6 @@ export default defineConfig({
     specPattern: "cypress/e2e/**/*.cy.ts",
     video: false,
     screenshotOnRunFailure: false,
+    allowCypressEnv: false,
   },
 });

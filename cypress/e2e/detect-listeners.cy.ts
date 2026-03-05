@@ -1,26 +1,16 @@
-describe("cursor pointer click detection", () => {
+describe("clickable element detection (vimium-c style)", () => {
   beforeEach(() => {
     cy.visit("cypress/fixtures/detect-listeners.html");
     cy.loadExtension();
   });
 
-  describe("given an element with cursor: pointer", () => {
+  describe("given elements with and without cursor: pointer", () => {
     describe("when activating click mode", () => {
-      it("then shows a hint on the element", () => {
+      it("then shows no hints (no actual interactive elements)", () => {
+        // Neither div has actual interactivity (no href, no event listeners, no tabindex)
+        // cursor: pointer alone does not make an element clickable in vimium-c
         cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 1);
-      });
-    });
-  });
-
-  describe("given an element with default cursor", () => {
-    describe("when activating click mode", () => {
-      it("then does not show a hint on the element", () => {
-        cy.pressCtrlShift("J");
-        cy.get("#default-target").then(($el) => {
-          cy.hintLabels().should("have.length", 1);
-          cy.wrap($el).should("not.have.attr", "data-hint");
-        });
+        cy.hintLabels().should("have.length", 0);
       });
     });
   });

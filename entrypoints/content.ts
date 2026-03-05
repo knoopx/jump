@@ -42,9 +42,19 @@ function activateHints(m: Mode): void {
   typed = "";
   mode = m;
 
-  const elements =
-    m === "focus" ? collectFocusTargets() : collectClickTargets();
-  if (elements.length === 0) return;
+  let elements: HTMLElement[] = [];
+  try {
+    elements = m === "focus" ? collectFocusTargets() : collectClickTargets();
+  } catch (err) {
+    console.error("Jump: Failed to collect targets:", err);
+    deactivateHints();
+    return;
+  }
+
+  if (elements.length === 0) {
+    deactivateHints();
+    return;
+  }
 
   hints = showHints(elements, m === "focus" ? FOCUS_STYLE : undefined);
   active = true;
@@ -94,7 +104,7 @@ function handleBackspace(): void {
 
 export default defineContentScript({
   matches: ["<all_urls>"],
-  runAt: "document_start",
+  runAt: "document_idle",
 
   main() {
     let lastCommandTime = 0;
@@ -187,5 +197,24 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener((msg: { command: string }) => {
       handleCommand(msg.command);
     });
+
+    // Handle SPA navigation by resetting state
+    let lastUrl = location.href;
+    const checkNavigation = () => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        if (active || focusActive()) {
+          if (focusActive()) {
+            exitFocus();
+          }
+          deactivateHints();
+          syncModeAttr();
+        }
+      }
+    };
+    window.addEventListener("popstate", checkNavigation);
+    window.addEventListener("hashchange", checkNavigation);
+    const observer = new MutationObserver(checkNavigation);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-url", "href"] });
   },
 });

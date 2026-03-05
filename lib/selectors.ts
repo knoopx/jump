@@ -30,26 +30,30 @@ export function buildLevels(el: HTMLElement): DepthLevel[] {
   const seen = new Set<string>();
   let current: HTMLElement | null = el;
 
-  while (
-    current &&
-    current !== document.body &&
-    current !== document.documentElement
-  ) {
-    const parent = current.parentElement;
-    if (parent) {
-      const count = [...parent.children].filter(
-        (c) => c.localName === current!.localName,
-      ).length;
+  try {
+    while (
+      current &&
+      current !== document.body &&
+      current !== document.documentElement
+    ) {
+      const parent = current.parentElement;
+      if (parent) {
+        const count = [...parent.children].filter(
+          (c) => c.localName === current!.localName,
+        ).length;
 
-      if (count > 1) {
-        const sel = siblingSelector(current);
-        if (!seen.has(sel)) {
-          seen.add(sel);
-          levels.push({ selector: sel, count, anchor: current, parent });
+        if (count > 1) {
+          const sel = siblingSelector(current);
+          if (!seen.has(sel)) {
+            seen.add(sel);
+            levels.push({ selector: sel, count, anchor: current, parent });
+          }
         }
       }
+      current = current.parentElement;
     }
-    current = current.parentElement;
+  } catch (err) {
+    console.warn("Jump: Error building levels:", err);
   }
 
   return levels;
