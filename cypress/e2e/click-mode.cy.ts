@@ -22,22 +22,7 @@ describe("click mode", () => {
 
     describe("when typing a complete hint label", () => {
       it("then triggers click on the matching element", () => {
-        cy.pressCtrlShift("J");
-        cy.hintLabels().then((labels) => {
-          cy.get("a")
-            .first()
-            .then(($el) => {
-              let clicked = false;
-              $el[0].addEventListener("click", (e) => {
-                e.preventDefault();
-                clicked = true;
-              });
-              cy.typeHintSeq(labels[0]);
-              cy.wait(50).then(() => {
-                expect(clicked).to.be.true;
-              });
-            });
-        });
+        testClickViaHint("a", 3);
       });
 
       it("then removes all hint overlays", () => {

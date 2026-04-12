@@ -14,19 +14,11 @@ describe("focus mode", () => {
 
     describe("when selecting a hint", () => {
       it("then shows the selector bar", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
-          cy.selectorBar().should("not.be.null");
-        });
+        testFocusViaHint("li", 4);
       });
 
       it("then highlights the selected element", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
-          cy.get("li").first().should("have.attr", "data-jump-focus");
-        });
+        testFocusViaHint("li", 4);
       });
 
       it("then applies mute overlay to non-sibling content", () => {
@@ -104,19 +96,7 @@ describe("focus mode", () => {
         cy.pressCtrlShift("K");
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
-          cy.document().then((doc) => {
-            let clicked = false;
-            doc.addEventListener(
-              "click",
-              () => {
-                clicked = true;
-              },
-              { once: true },
-            );
-            cy.pressKey("Enter").then(() => {
-              expect(clicked).to.be.true;
-            });
-          });
+          testEnterClicksHighlighted();
         });
       });
 

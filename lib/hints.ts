@@ -1,3 +1,4 @@
+// fallow-ignore-next-line unused-files
 const ALPHABET = "sadfjklewcmpgh";
 
 export function generateLabels(count: number): string[] {

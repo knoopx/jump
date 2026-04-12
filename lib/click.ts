@@ -1,3 +1,4 @@
+// fallow-ignore-next-line unused-files
 import { rectIntersectsViewport, isVisible, isOccluded } from "./visibility";
 
 // Elements that are inherently clickable/focusable by HTML spec
@@ -116,7 +117,7 @@ export function collectClickTargets(): HTMLElement[] {
     try {
       // Query all elements that might be clickable
       const candidates = root.querySelectorAll<HTMLElement>(
-        "*[tabindex],*[contenteditable],*[role],*[onclick],*[onmousedown],a,button,input,select,textarea,details,label,summary,option,menuitem,audio,video"
+        "*[tabindex],*[contenteditable],*[role],*[onclick],*[onmousedown],a,button,input,select,textarea,details,label,summary,option,menuitem,audio,video",
       );
 
       for (const el of candidates) {
@@ -205,7 +206,7 @@ export function simulateClick(target: HTMLElement): void {
     target.dispatchEvent(new MouseEvent("mousedown", shared));
     target.dispatchEvent(new MouseEvent("pointerup", shared));
     target.dispatchEvent(new MouseEvent("mouseup", shared));
-    
+
     // Only call native click() if it exists (some elements don't have it)
     if (typeof target.click === "function") {
       target.click();

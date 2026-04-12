@@ -14,11 +14,7 @@ describe("focus mode on aggressive SPA", () => {
 
     describe("when selecting a hint with characters the page tries to eat", () => {
       it("then enters focus mode with selector bar", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
-          cy.selectorBar().should("not.be.null");
-        });
+        testFocusViaHint("li.post", 4);
       });
     });
 
@@ -27,13 +23,9 @@ describe("focus mode on aggressive SPA", () => {
         cy.pressCtrlShift("K");
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
-          cy.get("li.post")
-            .eq(0)
-            .should("have.attr", "data-jump-focus");
+          cy.get("li.post").eq(0).should("have.attr", "data-jump-focus");
           cy.pressKey("j");
-          cy.get("li.post")
-            .eq(1)
-            .should("have.attr", "data-jump-focus");
+          cy.get("li.post").eq(1).should("have.attr", "data-jump-focus");
         });
       });
 
@@ -43,9 +35,7 @@ describe("focus mode on aggressive SPA", () => {
           cy.typeHintSeq(labels[0]);
           cy.pressKey("j");
           cy.pressKey("k");
-          cy.get("li.post")
-            .eq(0)
-            .should("have.attr", "data-jump-focus");
+          cy.get("li.post").eq(0).should("have.attr", "data-jump-focus");
         });
       });
     });
@@ -55,10 +45,7 @@ describe("focus mode on aggressive SPA", () => {
         cy.pressCtrlShift("K");
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
-          cy.selectorBar().should("not.be.null");
-          cy.pressKey("Escape");
-          cy.selectorBar().should("be.null");
-          cy.highlightedElement().should("be.null");
+          testEscapeExitsFocusMode();
         });
       });
     });
@@ -68,19 +55,7 @@ describe("focus mode on aggressive SPA", () => {
         cy.pressCtrlShift("K");
         cy.hintLabels().then((labels) => {
           cy.typeHintSeq(labels[0]);
-          cy.document().then((doc) => {
-            let clicked = false;
-            doc.addEventListener(
-              "click",
-              () => {
-                clicked = true;
-              },
-              { once: true },
-            );
-            cy.pressKey("Enter").then(() => {
-              expect(clicked).to.be.true;
-            });
-          });
+          testEnterClicksHighlighted();
         });
       });
     });

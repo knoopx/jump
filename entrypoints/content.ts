@@ -1,3 +1,4 @@
+// fallow-ignore-next-line unused-files
 import { collectClickTargets, simulateClick } from "@/lib/click";
 import {
   collectFocusTargets,
@@ -215,6 +216,9 @@ export default defineContentScript({
     window.addEventListener("popstate", checkNavigation);
     window.addEventListener("hashchange", checkNavigation);
     const observer = new MutationObserver(checkNavigation);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-url", "href"] });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-url", "href"],
+    });
   },
 });

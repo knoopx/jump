@@ -1,3 +1,4 @@
+// fallow-ignore-next-line unused-files
 export function rectIntersectsViewport(rect: DOMRect): boolean {
   return (
     rect.width > 0 &&
@@ -43,29 +44,29 @@ export function isOccluded(el: HTMLElement, rect: DOMRect): boolean {
 export function isVisible(el: HTMLElement): boolean {
   try {
     const style = getComputedStyle(el);
-    
+
     // Check display:none
     if (style.display === "none") {
       return false;
     }
-    
+
     // Check visibility:hidden (but allow visibility:visible children to override)
     if (style.visibility === "hidden") {
       return false;
     }
-    
+
     // Check opacity:0 (but allow opacity > 0, even very small values)
     const opacity = parseFloat(style.opacity);
     if (opacity === 0) {
       return false;
     }
-    
+
     // Check clip-path that fully clips the element
     const clipPath = style.clipPath;
     if (clipPath && clipPath.includes("inset(100%)")) {
       return false;
     }
-    
+
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return false;
     if (!rectIntersectsViewport(rect)) return false;

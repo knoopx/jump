@@ -1,3 +1,4 @@
+// fallow-ignore-next-line unused-files
 import { defineConfig } from "wxt";
 
 export default defineConfig({
@@ -34,6 +35,5 @@ export default defineConfig({
         description: "Activate focus hints",
       },
     },
-    web_accessible_resources: ["detect-listeners.js"],
   },
 });

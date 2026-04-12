@@ -19,40 +19,19 @@ describe("click mode on aggressive SPA", () => {
 
     describe("when typing hint characters that the page tries to eat", () => {
       it("then filters hints and clicks the target", () => {
-        cy.pressCtrlShift("J");
-        cy.hintLabels().then((labels) => {
-          cy.get("a")
-            .first()
-            .then(($el) => {
-              let clicked = false;
-              $el[0].addEventListener("click", (e) => {
-                e.preventDefault();
-                clicked = true;
-              });
-              cy.typeHintSeq(labels[0]);
-              cy.wait(50).then(() => {
-                expect(clicked).to.be.true;
-              });
-            });
-        });
+        testClickViaHint("a", 15);
       });
     });
 
     describe("when pressing Escape that the page tries to eat", () => {
       it("then deactivates hints", () => {
-        cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 15);
-        cy.pressKey("Escape");
-        cy.hintLabels().should("have.length", 0);
+        testEscapeDeactivatesHints(15);
       });
     });
 
     describe("when pressing Backspace with no typed characters", () => {
       it("then deactivates hints", () => {
-        cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 15);
-        cy.pressKey("Backspace");
-        cy.hintLabels().should("have.length", 0);
+        testBackspaceDeactivatesHints(15);
       });
     });
   });

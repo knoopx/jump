@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-export {};
+import "./test-utils";
 
 Cypress.Commands.add("loadExtension", () => {
   cy.window().then((win) => {
