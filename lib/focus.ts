@@ -45,6 +45,27 @@ function hasSharedClasses(el: HTMLElement): boolean {
   return false;
 }
 
+function shouldIncludeFocusableElement(el: HTMLElement): boolean {
+  if (!hasSameTagSiblings(el)) return false;
+  return true;
+}
+
+function shouldIncludeDivOrCustomElement(el: HTMLElement): boolean {
+  const isCustom = el.localName.includes("-");
+  const isDiv = el.localName === "div";
+
+  if (!isCustom && !isDiv) return false;
+
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  if (!rectIntersectsViewport(rect)) return false;
+
+  if (isDiv) return hasSameTagSiblings(el) && hasSharedClasses(el);
+  if (isCustom) return hasSameTagSiblings(el);
+
+  return false;
+}
+
 function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
   const seen = new Set<HTMLElement>();
   const results: HTMLElement[] = [];
@@ -52,21 +73,14 @@ function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
   try {
     for (const el of root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)) {
       if (seen.has(el)) continue;
-      if (!hasSameTagSiblings(el)) continue;
+      if (!shouldIncludeFocusableElement(el)) continue;
       seen.add(el);
       results.push(el);
     }
 
     for (const el of root.querySelectorAll<HTMLElement>("div, :defined")) {
       if (seen.has(el)) continue;
-      const isCustom = el.localName.includes("-");
-      const isDiv = el.localName === "div";
-      if (!isCustom && !isDiv) continue;
-      const rect = el.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) continue;
-      if (!rectIntersectsViewport(rect)) continue;
-      if (isDiv && !(hasSameTagSiblings(el) && hasSharedClasses(el))) continue;
-      if (isCustom && !hasSameTagSiblings(el)) continue;
+      if (!shouldIncludeDivOrCustomElement(el)) continue;
       seen.add(el);
       results.push(el);
     }
@@ -353,6 +367,6 @@ function changeDepth(delta: number): void {
   applyFocusLevel();
 }
 
-export function currentAnchor(): HTMLElement | null {
+function currentAnchor(): HTMLElement | null {
   return currentLevel()?.anchor ?? null;
 }

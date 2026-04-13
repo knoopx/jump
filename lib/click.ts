@@ -1,5 +1,5 @@
 // fallow-ignore-next-line unused-files
-import { rectIntersectsViewport, isVisible, isOccluded } from "./visibility";
+import { rectIntersectsViewport, isVisible } from "./visibility";
 
 // Elements that are inherently clickable/focusable by HTML spec
 const NATIVE_CLICKABLE_TAGS = new Set([
@@ -47,40 +47,40 @@ function hasClickEventListener(el: HTMLElement): boolean {
   return false;
 }
 
+// Check if input element is clickable
+function isInputClickable(input: HTMLInputElement): boolean {
+  const type = input.type?.toLowerCase() || "text";
+  if (type === "hidden") return false;
+  if (input.disabled) return false;
+  return true;
+}
+
+// Check if button or select is clickable
+function isButtonOrSelectClickable(
+  el: HTMLButtonElement | HTMLSelectElement,
+): boolean {
+  return !el.disabled;
+}
+
+// Check if anchor is clickable
+function isAnchorClickable(anchor: HTMLAnchorElement): boolean {
+  return !!anchor.href || !!anchor.name;
+}
+
 // Check if element is natively clickable based on tag and attributes
 function isNativeClickable(el: HTMLElement): boolean {
   const tag = el.localName;
 
-  // Native clickable tags
-  if (NATIVE_CLICKABLE_TAGS.has(tag)) {
-    // Special handling for inputs
-    if (tag === "input") {
-      const input = el as HTMLInputElement;
-      const type = input.type?.toLowerCase() || "text";
-      // Hidden inputs are not clickable
-      if (type === "hidden") return false;
-      // Disabled inputs are not clickable (but we may still want to hint them)
-      if (input.disabled) return false;
-      return true;
-    }
+  if (!NATIVE_CLICKABLE_TAGS.has(tag)) return false;
 
-    // Special handling for buttons/selects
-    if (tag === "button" || tag === "select") {
-      const btn = el as HTMLButtonElement | HTMLSelectElement;
-      if (btn.disabled) return false;
-      return true;
-    }
+  if (tag === "input") return isInputClickable(el as HTMLInputElement);
+  if (tag === "button" || tag === "select")
+    return isButtonOrSelectClickable(
+      el as HTMLButtonElement | HTMLSelectElement,
+    );
+  if (tag === "a") return isAnchorClickable(el as HTMLAnchorElement);
 
-    // Anchors need an href to be clickable
-    if (tag === "a") {
-      const anchor = el as HTMLAnchorElement;
-      return !!anchor.href || !!anchor.name;
-    }
-
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 // Check if element has interactive attributes
@@ -109,79 +109,78 @@ function hasInteractiveAttributes(el: HTMLElement): boolean {
   return false;
 }
 
-export function collectClickTargets(): HTMLElement[] {
-  const clickableElements: HTMLElement[] = [];
-  const seen = new Set<HTMLElement>();
+const CLICKABLE_CANDIDATES_SELECTOR =
+  "*[tabindex],*[contenteditable],*[role],*[onclick],*[onmousedown],a,button,input,select,textarea,details,label,summary,option,menuitem,audio,video";
 
-  function walk(root: Document | ShadowRoot): void {
-    try {
-      // Query all elements that might be clickable
-      const candidates = root.querySelectorAll<HTMLElement>(
-        "*[tabindex],*[contenteditable],*[role],*[onclick],*[onmousedown],a,button,input,select,textarea,details,label,summary,option,menuitem,audio,video",
-      );
+function isElementClickable(el: HTMLElement): boolean {
+  return (
+    isNativeClickable(el) ||
+    hasInteractiveAttributes(el) ||
+    hasClickEventListener(el)
+  );
+}
 
-      for (const el of candidates) {
-        if (seen.has(el)) continue;
-        seen.add(el);
+function shouldIncludeClickTarget(el: HTMLElement): boolean {
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  if (!rectIntersectsViewport(rect)) return false;
+  if (!isElementClickable(el)) return false;
+  if (!isVisible(el)) return false;
+  return true;
+}
 
-        // Skip if element has no dimensions
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) continue;
+function collectClickTargetsFromRoot(
+  root: Document | ShadowRoot,
+  seen: Set<HTMLElement>,
+  results: HTMLElement[],
+): void {
+  try {
+    const candidates = root.querySelectorAll<HTMLElement>(
+      CLICKABLE_CANDIDATES_SELECTOR,
+    );
 
-        // Skip if not in viewport
-        if (!rectIntersectsViewport(rect)) continue;
-
-        // Check if element is clickable
-        let isClickable = false;
-
-        if (isNativeClickable(el)) {
-          isClickable = true;
-        } else if (hasInteractiveAttributes(el)) {
-          isClickable = true;
-        } else if (hasClickEventListener(el)) {
-          isClickable = true;
-        }
-
-        if (!isClickable) continue;
-
-        // Check visibility (including occlusion)
-        if (!isVisible(el)) continue;
-
-        clickableElements.push(el);
-      }
-
-      // Recurse into shadow DOM
-      for (const el of root.querySelectorAll("*")) {
-        if (el.shadowRoot && !seen.has(el as HTMLElement)) {
-          walk(el.shadowRoot);
-        }
-      }
-    } catch (err) {
-      console.warn("Jump: Error walking DOM:", err);
+    for (const el of candidates) {
+      if (seen.has(el)) continue;
+      seen.add(el);
+      if (!shouldIncludeClickTarget(el)) continue;
+      results.push(el);
     }
+
+    // Recurse into shadow DOM
+    for (const el of root.querySelectorAll("*")) {
+      if (el.shadowRoot) {
+        collectClickTargetsFromRoot(el.shadowRoot, seen, results);
+      }
+    }
+  } catch (err) {
+    console.warn("Jump: Error walking DOM:", err);
   }
+}
 
-  walk(document);
-
-  // Filter out elements that have clickable descendants (we want the innermost element)
+function filterOutElementsWithDescendants(
+  elements: HTMLElement[],
+): HTMLElement[] {
   const hasClickableDescendant = new Set<HTMLElement>();
-  for (let i = 0; i < clickableElements.length; i++) {
-    for (let j = 0; j < clickableElements.length; j++) {
+
+  for (let i = 0; i < elements.length; i++) {
+    for (let j = 0; j < elements.length; j++) {
       if (i === j) continue;
-      if (clickableElements[i].contains(clickableElements[j])) {
-        hasClickableDescendant.add(clickableElements[i]);
+      if (elements[i].contains(elements[j])) {
+        hasClickableDescendant.add(elements[i]);
         break;
       }
     }
   }
 
-  const elements: HTMLElement[] = [];
-  for (const el of clickableElements) {
-    if (hasClickableDescendant.has(el)) continue;
-    elements.push(el);
-  }
+  return elements.filter((el) => !hasClickableDescendant.has(el));
+}
 
-  return elements;
+export function collectClickTargets(): HTMLElement[] {
+  const clickableElements: HTMLElement[] = [];
+  const seen = new Set<HTMLElement>();
+
+  collectClickTargetsFromRoot(document, seen, clickableElements);
+  return filterOutElementsWithDescendants(clickableElements);
 }
 
 export function simulateClick(target: HTMLElement): void {

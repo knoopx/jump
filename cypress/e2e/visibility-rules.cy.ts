@@ -4,16 +4,20 @@ describe("visibility rules", () => {
     cy.loadExtension();
   });
 
+  function withActivatedHints(checkFn: (doc: Document) => void) {
+    cy.pressCtrlShift("J");
+    cy.hintLabels().then(() => {
+      cy.document().then(checkFn);
+    });
+  }
+
   function testElementNotHinted(
     selector: string,
     checkFn: (el: HTMLElement) => void,
   ) {
-    cy.pressCtrlShift("J");
-    cy.hintLabels().then(() => {
-      cy.document().then((doc) => {
-        const el = doc.querySelector(selector) as HTMLElement;
-        checkFn(el);
-      });
+    withActivatedHints((doc) => {
+      const el = doc.querySelector(selector) as HTMLElement;
+      checkFn(el);
     });
   }
 
@@ -21,6 +25,26 @@ describe("visibility rules", () => {
     cy.get(selector).invoke("attr", "style", style);
     cy.pressCtrlShift("J");
     cy.hintLabelFor(selector).should("not.be.empty");
+  }
+
+  function testElementHiddenAfterStyleChange(
+    selector: string,
+    style: string,
+    checkFn: (el: HTMLElement) => void,
+  ) {
+    cy.get(selector).invoke("attr", "style", style);
+    withActivatedHints((doc) => {
+      const el = doc.querySelector(selector) as HTMLElement;
+      checkFn(el);
+    });
+  }
+
+  function testElementHasZeroDimensions(selector: string) {
+    testElementNotHinted(selector, (el) => {
+      const rect = el.getBoundingClientRect();
+      expect(rect.width).to.eq(0);
+      expect(rect.height).to.eq(0);
+    });
   }
 
   describe("click mode includes visible elements", () => {
@@ -95,32 +119,25 @@ describe("visibility rules", () => {
   describe("click mode excludes zero-dimension elements", () => {
     it("then skips a link with zero width", () => {
       testElementNotHinted("#zero-width", (el) => {
-        const rect = el.getBoundingClientRect();
-        expect(rect.width).to.eq(0);
+        expect(el.getBoundingClientRect().width).to.eq(0);
       });
     });
 
     it("then skips a link with zero height", () => {
       testElementNotHinted("#zero-height", (el) => {
-        const rect = el.getBoundingClientRect();
-        expect(rect.height).to.eq(0);
+        expect(el.getBoundingClientRect().height).to.eq(0);
       });
     });
 
     it("then skips a link with zero width and height", () => {
-      testElementNotHinted("#zero-both", (el) => {
-        const rect = el.getBoundingClientRect();
-        expect(rect.width).to.eq(0);
-        expect(rect.height).to.eq(0);
-      });
+      testElementHasZeroDimensions("#zero-both");
     });
   });
 
   describe("click mode excludes offscreen elements", () => {
     it("then skips a link positioned far offscreen", () => {
       testElementNotHinted("#offscreen", (el) => {
-        const rect = el.getBoundingClientRect();
-        expect(rect.right).to.be.lessThan(0);
+        expect(el.getBoundingClientRect().right).to.be.lessThan(0);
       });
     });
   });
@@ -135,11 +152,7 @@ describe("visibility rules", () => {
 
   describe("click mode excludes overflow-clipped elements", () => {
     it("then skips a link inside a zero-size overflow:hidden container", () => {
-      testElementNotHinted("#overflow-container", (el) => {
-        const rect = el.getBoundingClientRect();
-        expect(rect.width).to.eq(0);
-        expect(rect.height).to.eq(0);
-      });
+      testElementHasZeroDimensions("#overflow-container");
     });
   });
 
@@ -189,41 +202,24 @@ describe("visibility rules", () => {
     });
 
     it("then hides a previously visible element after setting display:none", () => {
-      cy.get("#visible").invoke("attr", "style", "display: none");
-      cy.pressCtrlShift("J");
-      cy.hintLabels().then((labels) => {
-        cy.document().then((doc) => {
-          const el = doc.querySelector("#visible") as HTMLElement;
-          expect(getComputedStyle(el).display).to.eq("none");
-          // visible element is gone, so hint count should be one less
-          // than what a full-page activation would normally show
-        });
+      testElementHiddenAfterStyleChange("#visible", "display: none", (el) => {
+        expect(getComputedStyle(el).display).to.eq("none");
       });
     });
 
     it("then hides a previously visible element after setting visibility:hidden", () => {
-      cy.get("#visible").invoke(
-        "attr",
-        "style",
+      testElementHiddenAfterStyleChange(
+        "#visible",
         "visibility: hidden; display: inline-block; width: 100px; height: 20px;",
-      );
-      cy.pressCtrlShift("J");
-      cy.hintLabels().then(() => {
-        cy.document().then((doc) => {
-          const el = doc.querySelector("#visible") as HTMLElement;
+        (el) => {
           expect(getComputedStyle(el).visibility).to.eq("hidden");
-        });
-      });
+        },
+      );
     });
 
     it("then hides a previously visible element after setting opacity:0", () => {
-      cy.get("#visible").invoke("attr", "style", "opacity: 0");
-      cy.pressCtrlShift("J");
-      cy.hintLabels().then(() => {
-        cy.document().then((doc) => {
-          const el = doc.querySelector("#visible") as HTMLElement;
-          expect(getComputedStyle(el).opacity).to.eq("0");
-        });
+      testElementHiddenAfterStyleChange("#visible", "opacity: 0", (el) => {
+        expect(getComputedStyle(el).opacity).to.eq("0");
       });
     });
   });

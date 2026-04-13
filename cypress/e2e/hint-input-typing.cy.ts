@@ -1,3 +1,11 @@
+import {
+  testHintCharactersDontLeakToSelector,
+  testEscapeDeactivatesHintsNoLeak,
+  testInputAcceptsAfterDismissal,
+  testRapidToggleNoLeak,
+  withSelectedFocusHint,
+} from "../support/test-utils";
+
 describe("hint typing on focused input", () => {
   beforeEach(() => {
     cy.visit("cypress/fixtures/hint-input-typing.html");
@@ -63,11 +71,7 @@ describe("hint typing on focused input", () => {
 
     describe("when pressing Escape with input focused", () => {
       it("then deactivates hints without typing into input", () => {
-        cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length.greaterThan", 0);
-        cy.pressKey("Escape");
-        cy.hintLabels().should("have.length", 0);
-        cy.get("#text-input").should("have.value", "");
+        testEscapeDeactivatesHintsNoLeak("#text-input");
       });
     });
 
@@ -91,11 +95,7 @@ describe("hint typing on focused input", () => {
 
     describe("when activating and typing hints", () => {
       it("then hint characters do not leak into textarea", () => {
-        cy.pressCtrlShift("J");
-        cy.hintLabels().then((labels) => {
-          cy.pressKey(labels[0][0]);
-          cy.get("#textarea").should("have.value", "");
-        });
+        testHintCharactersDontLeakToSelector("#textarea", "a");
       });
     });
   });
@@ -107,11 +107,7 @@ describe("hint typing on focused input", () => {
 
     describe("when activating and typing hints", () => {
       it("then hint characters do not insert into contenteditable", () => {
-        cy.pressCtrlShift("J");
-        cy.hintLabels().then((labels) => {
-          cy.pressKey(labels[0][0]);
-          cy.get("#editable").should("have.text", "editable");
-        });
+        testHintCharactersDontLeakToSelector("#editable", "a");
       });
     });
   });
@@ -151,9 +147,7 @@ describe("hint typing on focused input", () => {
 
     describe("when selecting a focus hint and navigating", () => {
       it("then j/k keystrokes do not type into the input", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        withSelectedFocusHint(() => {
           cy.pressKey("j");
           cy.pressKey("k");
           cy.get("#text-input").should("have.value", "");
@@ -165,13 +159,7 @@ describe("hint typing on focused input", () => {
   describe("given hints are deactivated", () => {
     describe("when typing into the input after hint dismissal", () => {
       it("then input accepts keystrokes normally", () => {
-        cy.get("#text-input").focus();
-        cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length.greaterThan", 0);
-        cy.pressKey("Escape");
-        cy.hintLabels().should("have.length", 0);
-        cy.get("#text-input").type("hello");
-        cy.get("#text-input").should("have.value", "hello");
+        testInputAcceptsAfterDismissal("#text-input");
       });
     });
   });
@@ -179,13 +167,7 @@ describe("hint typing on focused input", () => {
   describe("given rapid activation/deactivation with input focused", () => {
     describe("when toggling hints twice quickly", () => {
       it("then input remains clean and hints are removed", () => {
-        cy.get("#text-input").focus();
-        cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length.greaterThan", 0);
-        cy.wait(150);
-        cy.pressCtrlShift("J");
-        cy.hintLabels().should("have.length", 0);
-        cy.get("#text-input").should("have.value", "");
+        testRapidToggleNoLeak("#text-input");
       });
     });
   });

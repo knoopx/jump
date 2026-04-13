@@ -1,7 +1,7 @@
 // fallow-ignore-next-line unused-files
 const ALPHABET = "sadfjklewcmpgh";
 
-export function generateLabels(count: number): string[] {
+function generateLabels(count: number): string[] {
   if (count === 0) return [];
   const k = ALPHABET.length;
 
@@ -188,30 +188,43 @@ function rectsOverlap(
   );
 }
 
+function resolveOverlap(
+  a: { left: number; top: number; width: number; height: number },
+  b: { left: number; top: number; width: number; height: number },
+): void {
+  const PAD = 2;
+  const overlapRight = a.left + a.width - b.left;
+  const overlapDown = a.top + a.height - b.top;
+  if (overlapRight <= overlapDown) {
+    b.left = a.left + a.width + PAD;
+  } else {
+    b.top = a.top + a.height + PAD;
+  }
+}
+
 function deCollide(
   hints: { left: number; top: number; width: number; height: number }[],
 ): void {
-  const PAD = 2;
   const MAX_PASSES = 5;
   for (let pass = 0; pass < MAX_PASSES; pass++) {
-    let moved = false;
-    for (let i = 1; i < hints.length; i++) {
-      for (let j = 0; j < i; j++) {
-        const a = hints[j];
-        const b = hints[i];
-        if (!rectsOverlap(a, b)) continue;
-        moved = true;
-        const overlapRight = a.left + a.width - b.left;
-        const overlapDown = a.top + a.height - b.top;
-        if (overlapRight <= overlapDown) {
-          b.left = a.left + a.width + PAD;
-        } else {
-          b.top = a.top + a.height + PAD;
-        }
-      }
-    }
-    if (!moved) break;
+    if (!deCollidePass(hints)) break;
   }
+}
+
+function deCollidePass(
+  hints: { left: number; top: number; width: number; height: number }[],
+): boolean {
+  let moved = false;
+  for (let i = 1; i < hints.length; i++) {
+    for (let j = 0; j < i; j++) {
+      const a = hints[j];
+      const b = hints[i];
+      if (!rectsOverlap(a, b)) continue;
+      moved = true;
+      resolveOverlap(a, b);
+    }
+  }
+  return moved;
 }
 
 let dimOverlay: HTMLElement | null = null;

@@ -4,6 +4,20 @@ describe("mode switching", () => {
     cy.loadExtension();
   });
 
+  function selectFirstFocusHint() {
+    cy.pressCtrlShift("K");
+    cy.hintLabels().then((labels) => {
+      cy.typeHintSeq(labels[0]);
+      cy.selectorBar().should("not.be.null");
+    });
+  }
+
+  function verifyFocusModeExited() {
+    cy.selectorBar().should("be.null");
+    cy.highlightedElement().should("be.null");
+    cy.muteStyleTag().should("be.null");
+  }
+
   describe("given click mode is active", () => {
     describe("when pressing Ctrl+Shift+K", () => {
       it("then deactivates click hints", () => {
@@ -26,32 +40,23 @@ describe("mode switching", () => {
   });
 
   describe("given focus mode is active with a selected element", () => {
+    beforeEach(() => {
+      selectFirstFocusHint();
+      cy.wait(150);
+    });
+
     describe("when pressing Ctrl+Shift+J to switch to click mode", () => {
       it("then exits focus and activates click hints", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
-          cy.selectorBar().should("not.be.null");
-          cy.wait(150);
-          cy.pressCtrlShift("J");
-          cy.selectorBar().should("be.null");
-          cy.hintLabels().should("have.length", 3);
-        });
+        cy.pressCtrlShift("J");
+        cy.selectorBar().should("be.null");
+        cy.hintLabels().should("have.length", 3);
       });
     });
 
     describe("when pressing Ctrl+Shift+K again", () => {
       it("then exits focus mode completely", () => {
         cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
-          cy.selectorBar().should("not.be.null");
-          cy.wait(150);
-          cy.pressCtrlShift("K");
-          cy.selectorBar().should("be.null");
-          cy.highlightedElement().should("be.null");
-          cy.muteStyleTag().should("be.null");
-        });
+        verifyFocusModeExited();
       });
     });
   });

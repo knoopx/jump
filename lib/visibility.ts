@@ -10,7 +10,7 @@ export function rectIntersectsViewport(rect: DOMRect): boolean {
   );
 }
 
-export function deepElementFromPoint(x: number, y: number): Element | null {
+function deepElementFromPoint(x: number, y: number): Element | null {
   let current = document.elementFromPoint(x, y);
   while (current?.shadowRoot) {
     const inner = current.shadowRoot.elementFromPoint(x, y);
@@ -20,7 +20,7 @@ export function deepElementFromPoint(x: number, y: number): Element | null {
   return current;
 }
 
-export function isOccluded(el: HTMLElement, rect: DOMRect): boolean {
+function isOccluded(el: HTMLElement, rect: DOMRect): boolean {
   const points = [
     [rect.left + rect.width / 2, rect.top + rect.height / 2],
     [rect.left + 1, rect.top + 1],

@@ -1,3 +1,5 @@
+import { testClickViaHint } from "../support/test-utils";
+
 describe("click mode", () => {
   describe("given a page with clickable links", () => {
     beforeEach(() => {

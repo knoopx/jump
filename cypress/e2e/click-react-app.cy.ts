@@ -1,3 +1,9 @@
+import {
+  testBackspaceDeactivatesHints,
+  testClickViaHint,
+  testEscapeDeactivatesHints,
+} from "../support/test-utils";
+
 describe("click mode on aggressive SPA", () => {
   beforeEach(() => {
     cy.on("uncaught:exception", () => false);

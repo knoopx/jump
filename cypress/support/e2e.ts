@@ -59,12 +59,19 @@ Cypress.Commands.add("hintLabels", () => {
   });
 });
 
+function findElementByStyle(
+  doc: Document,
+  predicate: (d: HTMLElement) => boolean,
+): HTMLElement | null {
+  return [...doc.querySelectorAll<HTMLElement>("div")].find(predicate) ?? null;
+}
+
 Cypress.Commands.add("selectorBar", () => {
   return cy.document().then((doc) => {
-    const found =
-      [...doc.querySelectorAll<HTMLElement>("div")].find(
-        (d) => d.style.position === "fixed" && d.style.bottom === "24px",
-      ) ?? null;
+    const found = findElementByStyle(
+      doc,
+      (d) => d.style.position === "fixed" && d.style.bottom === "24px",
+    );
     return cy.wrap<HTMLElement | null>(found, { log: false });
   });
 });
@@ -78,13 +85,13 @@ Cypress.Commands.add("highlightedElement", () => {
 
 Cypress.Commands.add("muteStyleTag", () => {
   return cy.document().then((doc) => {
-    const found =
-      [...doc.querySelectorAll<HTMLElement>("div")].find(
-        (d) =>
-          d.style.position === "fixed" &&
-          d.style.inset === "0" &&
-          d.style.zIndex === "2147483646",
-      ) ?? null;
+    const found = findElementByStyle(
+      doc,
+      (d) =>
+        d.style.position === "fixed" &&
+        d.style.backdropFilter === "blur(4px)" &&
+        d.style.zIndex === "2147483646",
+    );
     return cy.wrap<HTMLElement | null>(found, { log: false });
   });
 });

@@ -1,3 +1,5 @@
+import { selectFirstFocusHintAndVerifyBar } from "../support/test-utils";
+
 describe("screenshots", () => {
   beforeEach(() => {
     cy.on("uncaught:exception", () => false);
@@ -29,14 +31,10 @@ describe("screenshots", () => {
     });
 
     it("captures focus navigation", () => {
-      cy.pressCtrlShift("K");
-      cy.hintLabels().then((labels) => {
-        cy.typeHintSeq(labels[0]);
-        cy.selectorBar().should("not.be.null");
-        cy.screenshot("focus-navigation", {
-          capture: "viewport",
-          overwrite: true,
-        });
+      selectFirstFocusHintAndVerifyBar();
+      cy.screenshot("focus-navigation", {
+        capture: "viewport",
+        overwrite: true,
       });
     });
   });

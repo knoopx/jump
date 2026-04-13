@@ -1,6 +1,6 @@
 // fallow-ignore-next-line unused-files
 // Build a selector for `el` using only classes shared with same-tag siblings
-export function siblingSelector(el: HTMLElement): string {
+function siblingSelector(el: HTMLElement): string {
   const tag = CSS.escape(el.localName);
   const parent = el.parentElement;
   if (!parent) return tag;

@@ -1,3 +1,9 @@
+import {
+  testEventListenerTriggered,
+  testFullEventSequence,
+  testEventCoordinatesAtCenter,
+} from "../support/test-utils";
+
 describe("click event sequence", () => {
   describe("given a page with elements using different event listeners", () => {
     beforeEach(() => {

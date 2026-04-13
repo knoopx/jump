@@ -1,3 +1,10 @@
+import {
+  withSelectedFocusHint,
+  testFocusViaHint,
+  testEscapeExitsFocusMode,
+  testEnterClicksHighlighted,
+} from "../support/test-utils";
+
 describe("focus mode on aggressive SPA", () => {
   describe("given a React-like app that calls stopImmediatePropagation on keydown", () => {
     beforeEach(() => {
@@ -20,9 +27,7 @@ describe("focus mode on aggressive SPA", () => {
 
     describe("when navigating with j/k that the page tries to eat", () => {
       it("then j moves to next sibling", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        withSelectedFocusHint(() => {
           cy.get("li.post").eq(0).should("have.attr", "data-jump-focus");
           cy.pressKey("j");
           cy.get("li.post").eq(1).should("have.attr", "data-jump-focus");
@@ -30,9 +35,7 @@ describe("focus mode on aggressive SPA", () => {
       });
 
       it("then k moves to previous sibling", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        withSelectedFocusHint(() => {
           cy.pressKey("j");
           cy.pressKey("k");
           cy.get("li.post").eq(0).should("have.attr", "data-jump-focus");
@@ -42,9 +45,7 @@ describe("focus mode on aggressive SPA", () => {
 
     describe("when pressing Escape that the page tries to eat", () => {
       it("then exits focus mode", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        withSelectedFocusHint(() => {
           testEscapeExitsFocusMode();
         });
       });
@@ -52,9 +53,7 @@ describe("focus mode on aggressive SPA", () => {
 
     describe("when pressing Enter in focus mode", () => {
       it("then clicks the highlighted element", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        withSelectedFocusHint(() => {
           testEnterClicksHighlighted();
         });
       });

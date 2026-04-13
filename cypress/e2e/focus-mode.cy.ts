@@ -1,9 +1,23 @@
+import {
+  selectFirstFocusHintAndVerifyBar,
+  testFocusViaHint,
+  testEnterClicksHighlighted,
+} from "../support/test-utils";
+
 describe("focus mode", () => {
   describe("given a page with repeating list items", () => {
     beforeEach(() => {
       cy.visit("cypress/fixtures/focus-list.html");
       cy.loadExtension();
     });
+
+    function selectFirstFocusHintAndRun(testFn: (labels: string[]) => void) {
+      cy.pressCtrlShift("K");
+      cy.hintLabels().then((labels) => {
+        cy.typeHintSeq(labels[0]);
+        testFn(labels);
+      });
+    }
 
     describe("when activating with Ctrl+Shift+K", () => {
       it("then shows hints on each repeating item", () => {
@@ -22,17 +36,14 @@ describe("focus mode", () => {
       });
 
       it("then applies mute overlay to non-sibling content", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
+          cy.wait(100);
           cy.muteStyleTag().should("not.be.null");
         });
       });
 
       it("then removes hint overlays", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.hintLabels().should("have.length", 0);
         });
       });
@@ -40,9 +51,7 @@ describe("focus mode", () => {
 
     describe("when navigating with j/k", () => {
       it("then j moves highlight to next sibling", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.get("li").eq(0).should("have.attr", "data-jump-focus");
           cy.pressKey("j");
           cy.get("li").eq(1).should("have.attr", "data-jump-focus");
@@ -50,9 +59,7 @@ describe("focus mode", () => {
       });
 
       it("then k moves highlight to previous sibling", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.pressKey("j");
           cy.pressKey("j");
           cy.pressKey("k");
@@ -61,27 +68,21 @@ describe("focus mode", () => {
       });
 
       it("then j does not go past last sibling", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           for (let i = 0; i < 20; i++) cy.pressKey("j");
           cy.get("li").last().should("have.attr", "data-jump-focus");
         });
       });
 
       it("then k does not go before first sibling", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           for (let i = 0; i < 20; i++) cy.pressKey("k");
           cy.get("li").first().should("have.attr", "data-jump-focus");
         });
       });
 
       it("then selector bar persists during navigation", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.selectorBar().should("not.be.null");
           cy.pressKey("j");
           cy.pressKey("j");
@@ -93,17 +94,13 @@ describe("focus mode", () => {
 
     describe("when pressing Enter", () => {
       it("then triggers click on highlighted element", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           testEnterClicksHighlighted();
         });
       });
 
       it("then exits focus mode", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.pressKey("Enter");
           cy.selectorBar().should("be.null");
           cy.highlightedElement().should("be.null");
@@ -114,27 +111,21 @@ describe("focus mode", () => {
 
     describe("when pressing Escape", () => {
       it("then removes selector bar", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.pressKey("Escape");
           cy.selectorBar().should("be.null");
         });
       });
 
       it("then removes highlight", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.pressKey("Escape");
           cy.highlightedElement().should("be.null");
         });
       });
 
       it("then removes mute overlay", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
+        selectFirstFocusHintAndRun(() => {
           cy.pressKey("Escape");
           cy.muteStyleTag().should("be.null");
         });
@@ -234,13 +225,9 @@ describe("focus mode", () => {
 
     describe("when pressing f to narrow depth", () => {
       it("then does not go below initial depth", () => {
-        cy.pressCtrlShift("K");
-        cy.hintLabels().then((labels) => {
-          cy.typeHintSeq(labels[0]);
-          cy.selectorBar().should("not.be.null");
-          cy.pressKey("f");
-          cy.selectorBar().should("not.be.null");
-        });
+        selectFirstFocusHintAndVerifyBar();
+        cy.pressKey("f");
+        cy.selectorBar().should("not.be.null");
       });
     });
   });
