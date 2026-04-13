@@ -79,10 +79,13 @@ Cypress.Commands.add("highlightedElement", () => {
 Cypress.Commands.add("muteStyleTag", () => {
   return cy.document().then((doc) => {
     const found =
-      [...doc.querySelectorAll<HTMLStyleElement>("style")].find((s) =>
-        s.textContent?.includes("data-jump-mute-parent"),
+      [...doc.querySelectorAll<HTMLElement>("div")].find(
+        (d) =>
+          d.style.position === "fixed" &&
+          d.style.inset === "0" &&
+          d.style.zIndex === "2147483646",
       ) ?? null;
-    return cy.wrap<HTMLStyleElement | null>(found, { log: false });
+    return cy.wrap<HTMLElement | null>(found, { log: false });
   });
 });
 
@@ -125,7 +128,7 @@ declare global {
       hintLabelFor(selector: string): Chainable<string>;
       selectorBar(): Chainable<HTMLElement | null>;
       highlightedElement(): Chainable<HTMLElement | null>;
-      muteStyleTag(): Chainable<HTMLStyleElement | null>;
+      muteStyleTag(): Chainable<HTMLElement | null>;
     }
   }
 }

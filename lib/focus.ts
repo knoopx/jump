@@ -103,52 +103,53 @@ export function collectFocusTargets(): HTMLElement[] {
 let focusLevels: DepthLevel[] = [];
 let focusDepth = -1;
 let focusIndex = 0;
-let muteStyle: HTMLStyleElement | null = null;
 let selectorBar: HTMLElement | null = null;
-let highlightOverlay: HTMLElement | null = null;
+let spotlightOverlay: HTMLElement | null = null;
 let highlightTarget: HTMLElement | null = null;
 let onExitCallback: ((target: HTMLElement | null) => void) | null = null;
 
-function positionOverlay(): void {
-  if (!highlightOverlay || !highlightTarget) return;
+function positionSpotlight(): void {
+  if (!spotlightOverlay || !highlightTarget) return;
   const rect = highlightTarget.getBoundingClientRect();
-  const pad = 16;
-  const top = rect.top + window.scrollY - pad;
-  const left = rect.left + window.scrollX - pad;
-  Object.assign(highlightOverlay.style, {
-    top: `${top}px`,
-    left: `${left}px`,
-    width: `${rect.width + pad * 2}px`,
-    height: `${rect.height + pad * 2}px`,
-  });
+  const pad = 10;
+  const radius = 8;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const t = rect.top - pad;
+  const r = rect.right + pad;
+  const b = rect.bottom + pad;
+  const l = rect.left - pad;
+  const cr = Math.min(radius, (r - l) / 2, (b - t) / 2);
+  spotlightOverlay.style.clipPath = `path(evenodd,'M 0 0 L ${W} 0 L ${W} ${H} L 0 ${H} Z M ${l + cr} ${t} L ${r - cr} ${t} A ${cr} ${cr} 0 0 1 ${r} ${t + cr} L ${r} ${b - cr} A ${cr} ${cr} 0 0 1 ${r - cr} ${b} L ${l + cr} ${b} A ${cr} ${cr} 0 0 1 ${l} ${b - cr} L ${l} ${t + cr} A ${cr} ${cr} 0 0 1 ${l + cr} ${t} Z')`;
 }
 
 function onScrollReposition(): void {
-  positionOverlay();
+  positionSpotlight();
 }
 
 function highlightAnchor(el: HTMLElement): void {
   removeHighlight();
   highlightTarget = el;
   el.setAttribute("data-jump-focus", "");
-  highlightOverlay = document.createElement("div");
-  Object.assign(highlightOverlay.style, {
-    position: "absolute",
-    border: "2px solid #a78bfa",
-    borderRadius: "4px",
+  spotlightOverlay = document.createElement("div");
+  Object.assign(spotlightOverlay.style, {
+    position: "fixed",
+    inset: "0",
+    background: "rgba(0, 0, 0, 0.5)",
+    backdropFilter: "blur(4px)",
     pointerEvents: "none",
     zIndex: "2147483646",
-    boxSizing: "border-box",
+    transition: "clip-path 0.15s ease",
   });
-  document.documentElement.appendChild(highlightOverlay);
-  positionOverlay();
+  document.documentElement.appendChild(spotlightOverlay);
+  positionSpotlight();
   window.addEventListener("scroll", onScrollReposition, true);
 }
 
 function removeHighlight(): void {
   window.removeEventListener("scroll", onScrollReposition, true);
-  highlightOverlay?.remove();
-  highlightOverlay = null;
+  spotlightOverlay?.remove();
+  spotlightOverlay = null;
   highlightTarget?.removeAttribute("data-jump-focus");
   highlightTarget = null;
 }
@@ -206,47 +207,9 @@ function hideBar(): void {
   selectorBar = null;
 }
 
-const MUTE_ANCESTOR = "data-jump-ancestor";
-const MUTE_PARENT = "data-jump-mute-parent";
-
-function applyMute(): void {
-  removeMute();
-  const level = currentLevel();
-  if (!level) return;
-
-  let node: HTMLElement | null = level.parent.parentElement;
-  while (node && node !== document.documentElement) {
-    node.setAttribute(MUTE_ANCESTOR, "");
-    node = node.parentElement;
-  }
-
-  level.parent.setAttribute(MUTE_PARENT, "");
-
-  const dimRule = "opacity: 0.15; transition: opacity 0.15s;";
-  muteStyle = document.createElement("style");
-  muteStyle.textContent = [
-    `body > :not([${MUTE_ANCESTOR}]):not([${MUTE_PARENT}]) { ${dimRule} }`,
-    `[${MUTE_ANCESTOR}] > :not([${MUTE_ANCESTOR}]):not([${MUTE_PARENT}]) { ${dimRule} }`,
-    `[${MUTE_PARENT}] > :not(${level.selector}) { ${dimRule} }`,
-  ].join("\n");
-  document.head.appendChild(muteStyle);
-}
-
-function removeMute(): void {
-  muteStyle?.remove();
-  muteStyle = null;
-  document
-    .querySelectorAll(`[${MUTE_ANCESTOR}], [${MUTE_PARENT}]`)
-    .forEach((el) => {
-      el.removeAttribute(MUTE_ANCESTOR);
-      el.removeAttribute(MUTE_PARENT);
-    });
-}
-
 function applyFocusLevel(): void {
   const level = currentLevel();
   if (!level) return;
-  applyMute();
   level.anchor.scrollIntoView({ block: "center" });
   highlightAnchor(level.anchor);
   showBar();
@@ -324,7 +287,6 @@ export function exitFocus(): void {
   focusLevels = [];
   focusDepth = -1;
   focusIndex = 0;
-  removeMute();
   removeHighlight();
   hideBar();
   (document.activeElement as HTMLElement)?.blur();
