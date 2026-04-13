@@ -214,6 +214,86 @@ function deCollide(
   }
 }
 
+let dimOverlay: HTMLElement | null = null;
+
+type Rect = { t: number; r: number; b: number; l: number };
+
+function mergeOverlapping(rects: Rect[]): Rect[] {
+  const result = [...rects];
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let i = 0; i < result.length; i++) {
+      for (let j = i + 1; j < result.length; j++) {
+        const a = result[i];
+        const b = result[j];
+        if (a.l <= b.r && b.l <= a.r && a.t <= b.b && b.t <= a.b) {
+          result[i] = {
+            l: Math.min(a.l, b.l),
+            t: Math.min(a.t, b.t),
+            r: Math.max(a.r, b.r),
+            b: Math.max(a.b, b.b),
+          };
+          result.splice(j, 1);
+          merged = true;
+          break;
+        }
+      }
+      if (merged) break;
+    }
+  }
+  return result;
+}
+
+function buildDimPath(elements: HTMLElement[]): string {
+  const pad = 4;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const rects = mergeOverlapping(
+    elements
+      .map((el) => el.getBoundingClientRect())
+      .map((r) => ({
+        t: r.top - pad,
+        r: r.right + pad,
+        b: r.bottom + pad,
+        l: r.left - pad,
+      }))
+      // skip rects fully outside viewport
+      .filter((r) => r.r > 0 && r.l < W && r.b > 0 && r.t < H),
+  );
+
+  // Build evenodd path: outer rect (CW) then each cutout (CCW)
+  let d = `M 0 0 L ${W} 0 L ${W} ${H} L 0 ${H} Z`;
+  for (const r of rects) {
+    d += ` M ${r.l} ${r.t} L ${r.l} ${r.b} L ${r.r} ${r.b} L ${r.r} ${r.t} Z`;
+  }
+  return `path(evenodd,'${d}')`;
+}
+
+function positionDimOverlay(elements: HTMLElement[]): void {
+  if (!dimOverlay) return;
+  dimOverlay.style.clipPath = buildDimPath(elements);
+}
+
+function showDimOverlay(elements: HTMLElement[]): void {
+  removeDimOverlay();
+  dimOverlay = document.createElement("div");
+  Object.assign(dimOverlay.style, {
+    position: "fixed",
+    inset: "0",
+    background: "rgba(0, 0, 0, 0.4)",
+    pointerEvents: "none",
+    zIndex: "2147483646",
+  });
+  positionDimOverlay(elements);
+  document.documentElement.appendChild(dimOverlay);
+}
+
+function removeDimOverlay(): void {
+  dimOverlay?.remove();
+  dimOverlay = null;
+}
+
 export function showHints(
   elements: HTMLElement[],
   styleOverride?: Record<string, string>,
@@ -262,6 +342,7 @@ export function showHints(
     hints.push({ label: labels[i], element: elements[i], overlay });
   }
 
+  showDimOverlay(elements);
   return hints;
 }
 
@@ -276,10 +357,12 @@ export function filterHints(hints: ActiveHint[], typed: string): ActiveHint[] {
       hint.overlay.style.display = "none";
     }
   }
+  positionDimOverlay(matching.map((h) => h.element));
   return matching;
 }
 
 export function removeHints(): void {
+  removeDimOverlay();
   for (const el of managedElements) {
     el.remove();
   }
