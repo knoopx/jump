@@ -1,4 +1,3 @@
-// fallow-ignore-next-line unused-files
 import { defineConfig } from "wxt";
 
 export default defineConfig({

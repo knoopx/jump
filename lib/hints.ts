@@ -1,4 +1,3 @@
-// fallow-ignore-next-line unused-files
 const ALPHABET = "sadfjklewcmpgh";
 
 function generateLabels(count: number): string[] {
@@ -50,28 +49,59 @@ type Gravity =
 
 const GAP = 0;
 
-function pickGravity(rect: DOMRect, hintW: number, hintH: number): Gravity {
+function fitsBottomCenter(
+  rect: DOMRect,
+  hintW: number,
+  hintH: number,
+): boolean {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-
   const centerX = rect.left + (rect.width - hintW) / 2;
-  const fitsBottomCenter =
-    centerX >= 0 && centerX + hintW <= vw && rect.bottom + hintH <= vh;
+  return centerX >= 0 && centerX + hintW <= vw && rect.bottom + hintH <= vh;
+}
 
-  if (fitsBottomCenter) return "bottom";
+function fitsSide(
+  rect: DOMRect,
+  hintW: number,
+  hintH: number,
+): {
+  right: boolean;
+  left: boolean;
+  top: boolean;
+  below: boolean;
+} {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  return {
+    right: vw - rect.right >= hintW + GAP,
+    left: rect.left >= hintW + GAP,
+    top: rect.top >= hintH + GAP,
+    below: vh - rect.bottom >= hintH + GAP,
+  };
+}
 
-  const fitsRight = vw - rect.right >= hintW + GAP;
-  const fitsLeft = rect.left >= hintW + GAP;
-  const fitsTop = rect.top >= hintH + GAP;
-  const fitsBelow = vh - rect.bottom >= hintH + GAP;
+const GRAVITY_MAP: Record<number, Gravity> = {
+  9: "top-right",
+  5: "top-left",
+  10: "bottom-right",
+  6: "bottom-left",
+};
 
-  if (fitsTop) return "top";
-  if (fitsTop && fitsRight) return "top-right";
-  if (fitsTop && fitsLeft) return "top-left";
-  if (fitsBelow && fitsRight) return "bottom-right";
-  if (fitsBelow && fitsLeft) return "bottom-left";
+function pickGravity(rect: DOMRect, hintW: number, hintH: number): Gravity {
+  if (fitsBottomCenter(rect, hintW, hintH)) return "bottom";
 
-  return "bottom";
+  const fits = fitsSide(rect, hintW, hintH);
+  const v =
+    Number(fits.top) * 1 +
+    Number(fits.below) * 2 +
+    Number(fits.left) * 4 +
+    Number(fits.right) * 8;
+
+  return GRAVITY_MAP[v] ?? "top";
+}
+
+function isSmallTarget(rect: DOMRect, hintW: number, hintH: number): boolean {
+  return rect.width < hintW * 3 && rect.height < hintH * 3;
 }
 
 function positionForGravity(
@@ -83,27 +113,22 @@ function positionForGravity(
   const centerX = rect.left + (rect.width - hintW) / 2;
   const centerY = rect.top + (rect.height - hintH) / 2;
 
-  if (rect.width < hintW * 3 && rect.height < hintH * 3) {
+  if (isSmallTarget(rect, hintW, hintH)) {
     return { left: centerX, top: centerY };
   }
 
-  switch (gravity) {
-    case "bottom":
-      return {
-        left: rect.right - hintW,
-        top: centerY,
-      };
-    case "top":
-      return { left: centerX, top: rect.top - hintH - GAP };
-    case "top-right":
-      return { left: rect.right + GAP, top: rect.top - hintH - GAP };
-    case "top-left":
-      return { left: rect.left - hintW - GAP, top: rect.top - hintH - GAP };
-    case "bottom-right":
-      return { left: rect.right + GAP, top: rect.bottom + GAP };
-    case "bottom-left":
-      return { left: rect.left - hintW - GAP, top: rect.bottom + GAP };
+  if (gravity === "bottom") {
+    return { left: rect.right - hintW, top: centerY };
   }
+  if (gravity === "top") {
+    return { left: centerX, top: rect.top - hintH - GAP };
+  }
+
+  const isRight = gravity.includes("right");
+  const isTop = gravity.startsWith("top-");
+  const x = isRight ? rect.right + GAP : rect.left - hintW - GAP;
+  const y = isTop ? rect.top - hintH - GAP : rect.bottom + GAP;
+  return { left: x, top: y };
 }
 
 function clampToViewport(
@@ -122,10 +147,11 @@ function createHintElement(
   styleOverride?: Record<string, string>,
 ): HTMLElement {
   const hint = document.createElement("div");
-  hint.innerHTML = label
-    .split("")
-    .map((c) => `<span>${c}</span>`)
-    .join("");
+  for (const c of label) {
+    const span = document.createElement("span");
+    span.textContent = c;
+    hint.appendChild(span);
+  }
 
   Object.assign(hint.style, {
     ...HINT_STYLE,
@@ -153,14 +179,15 @@ function updateHintDisplay(
   label: string,
   typed: string,
 ): void {
-  const chars = label.split("");
-  hint.innerHTML = chars
-    .map((c, i) =>
-      i < typed.length
-        ? `<span style="${MATCHED_CHAR_STYLE}">${c}</span>`
-        : `<span>${c}</span>`,
-    )
-    .join("");
+  hint.replaceChildren();
+  for (let i = 0; i < label.length; i++) {
+    const span = document.createElement("span");
+    span.textContent = label[i];
+    if (i < typed.length) {
+      span.style.cssText = MATCHED_CHAR_STYLE;
+    }
+    hint.appendChild(span);
+  }
 }
 
 export interface ActiveHint {
@@ -186,6 +213,19 @@ function rectsOverlap(
     a.top < b.top + b.height &&
     b.top < a.top + a.height
   );
+}
+
+function rectsOverlapDim(a: Rect, b: Rect): boolean {
+  return a.l <= b.r && b.l <= a.r && a.t <= b.b && b.t <= a.b;
+}
+
+function mergeTwoRects(a: Rect, b: Rect): Rect {
+  return {
+    l: Math.min(a.l, b.l),
+    t: Math.min(a.t, b.t),
+    r: Math.max(a.r, b.r),
+    b: Math.max(a.b, b.b),
+  };
 }
 
 function resolveOverlap(
@@ -231,29 +271,26 @@ let dimOverlay: HTMLElement | null = null;
 
 type Rect = { t: number; r: number; b: number; l: number };
 
+function findFirstOverlappingPair(
+  rects: Rect[],
+): { i: number; j: number } | null {
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      if (rectsOverlapDim(rects[i], rects[j])) {
+        return { i, j };
+      }
+    }
+  }
+  return null;
+}
+
 function mergeOverlapping(rects: Rect[]): Rect[] {
   const result = [...rects];
-  let merged = true;
-  while (merged) {
-    merged = false;
-    for (let i = 0; i < result.length; i++) {
-      for (let j = i + 1; j < result.length; j++) {
-        const a = result[i];
-        const b = result[j];
-        if (a.l <= b.r && b.l <= a.r && a.t <= b.b && b.t <= a.b) {
-          result[i] = {
-            l: Math.min(a.l, b.l),
-            t: Math.min(a.t, b.t),
-            r: Math.max(a.r, b.r),
-            b: Math.max(a.b, b.b),
-          };
-          result.splice(j, 1);
-          merged = true;
-          break;
-        }
-      }
-      if (merged) break;
-    }
+  while (true) {
+    const pair = findFirstOverlappingPair(result);
+    if (!pair) break;
+    result[pair.i] = mergeTwoRects(result[pair.i], result[pair.j]);
+    result.splice(pair.j, 1);
   }
   return result;
 }

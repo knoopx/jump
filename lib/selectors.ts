@@ -1,4 +1,3 @@
-// fallow-ignore-next-line unused-files
 // Build a selector for `el` using only classes shared with same-tag siblings
 function siblingSelector(el: HTMLElement): string {
   const tag = CSS.escape(el.localName);
@@ -25,6 +24,17 @@ export interface DepthLevel {
   parent: HTMLElement;
 }
 
+function countSameTagSiblings(el: HTMLElement): number {
+  const parent = el.parentElement;
+  if (!parent) return 0;
+  return [...parent.children].filter((c) => c.localName === el.localName)
+    .length;
+}
+
+function isAtDocumentRoot(el: HTMLElement): boolean {
+  return el === document.body || el === document.documentElement;
+}
+
 // Walk up from `el`, collect levels where same-tag siblings exist (repeating)
 export function buildLevels(el: HTMLElement): DepthLevel[] {
   const levels: DepthLevel[] = [];
@@ -32,30 +42,33 @@ export function buildLevels(el: HTMLElement): DepthLevel[] {
   let current: HTMLElement | null = el;
 
   try {
-    while (
-      current &&
-      current !== document.body &&
-      current !== document.documentElement
-    ) {
-      const parent = current.parentElement;
-      if (parent) {
-        const count = [...parent.children].filter(
-          (c) => c.localName === current!.localName,
-        ).length;
+    while (current && !isAtDocumentRoot(current)) {
+      const parent: HTMLElement | null =
+        current.parentElement as HTMLElement | null;
+      if (!parent) break;
 
-        if (count > 1) {
-          const sel = siblingSelector(current);
-          if (!seen.has(sel)) {
-            seen.add(sel);
-            levels.push({ selector: sel, count, anchor: current, parent });
-          }
-        }
+      const count = countSameTagSiblings(current);
+      if (count > 1) {
+        addLevelIfNew(current, parent, count, seen, levels);
       }
-      current = current.parentElement;
+      current = parent;
     }
   } catch (err) {
     console.warn("Jump: Error building levels:", err);
   }
 
   return levels;
+}
+
+function addLevelIfNew(
+  el: HTMLElement,
+  parent: HTMLElement,
+  count: number,
+  seen: Set<string>,
+  levels: DepthLevel[],
+): void {
+  const sel = siblingSelector(el);
+  if (seen.has(sel)) return;
+  seen.add(sel);
+  levels.push({ selector: sel, count, anchor: el, parent });
 }

@@ -1,4 +1,3 @@
-// fallow-ignore-next-line unused-files
 import { rectIntersectsViewport, isVisible } from "./visibility";
 
 // Elements that are inherently clickable/focusable by HTML spec
@@ -70,42 +69,54 @@ function isAnchorClickable(anchor: HTMLAnchorElement): boolean {
 // Check if element is natively clickable based on tag and attributes
 function isNativeClickable(el: HTMLElement): boolean {
   const tag = el.localName;
-
   if (!NATIVE_CLICKABLE_TAGS.has(tag)) return false;
 
-  if (tag === "input") return isInputClickable(el as HTMLInputElement);
-  if (tag === "button" || tag === "select")
-    return isButtonOrSelectClickable(
-      el as HTMLButtonElement | HTMLSelectElement,
-    );
-  if (tag === "a") return isAnchorClickable(el as HTMLAnchorElement);
-
-  return true;
+  switch (tag) {
+    case "input":
+      return isInputClickable(el as HTMLInputElement);
+    case "button":
+    case "select":
+      return isButtonOrSelectClickable(
+        el as HTMLButtonElement | HTMLSelectElement,
+      );
+    case "a":
+      return isAnchorClickable(el as HTMLAnchorElement);
+    default:
+      return true;
+  }
 }
 
-// Check if element has interactive attributes
-function hasInteractiveAttributes(el: HTMLElement): boolean {
-  // tabindex >= 0 makes an element focusable/clickable
+function hasValidTabIndex(el: HTMLElement): boolean {
   const tabindex = el.getAttribute("tabindex");
-  if (tabindex !== null) {
-    const tabValue = parseInt(tabindex, 10);
-    if (!isNaN(tabValue) && tabValue >= 0) return true;
-  }
+  if (tabindex === null) return false;
+  const tabValue = parseInt(tabindex, 10);
+  return !isNaN(tabValue) && tabValue >= 0;
+}
 
-  // contentEditable makes an element editable/clickable
+function hasContentEditable(el: HTMLElement): boolean {
   const contentEditable = el.getAttribute("contenteditable");
-  if (contentEditable && contentEditable.toLowerCase() !== "false") return true;
+  return !!(contentEditable && contentEditable.toLowerCase() !== "false");
+}
 
-  // ARIA roles indicating interactivity
+function hasInteractiveRole(el: HTMLElement): boolean {
   const role = el.getAttribute("role");
-  if (role && INTERACTIVE_ROLES.has(role.toLowerCase())) return true;
+  return !!(role && INTERACTIVE_ROLES.has(role.toLowerCase()));
+}
 
-  // Common onclick-like attributes
+function hasClickAttrs(el: HTMLElement): boolean {
   const clickAttrs = ["onclick", "onmousedown", "onmouseenter", "ontouchstart"];
   for (const attr of clickAttrs) {
     if (el.hasAttribute(attr)) return true;
   }
+  return false;
+}
 
+// Check if element has interactive attributes
+function hasInteractiveAttributes(el: HTMLElement): boolean {
+  if (hasValidTabIndex(el)) return true;
+  if (hasContentEditable(el)) return true;
+  if (hasInteractiveRole(el)) return true;
+  if (hasClickAttrs(el)) return true;
   return false;
 }
 
@@ -120,13 +131,28 @@ function isElementClickable(el: HTMLElement): boolean {
   );
 }
 
+function passesSizeCheck(rect: DOMRect): boolean {
+  return rect.width > 0 && rect.height > 0;
+}
+
 function shouldIncludeClickTarget(el: HTMLElement): boolean {
   const rect = el.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return false;
+  if (!passesSizeCheck(rect)) return false;
   if (!rectIntersectsViewport(rect)) return false;
   if (!isElementClickable(el)) return false;
-  if (!isVisible(el)) return false;
-  return true;
+  return isVisible(el);
+}
+
+function recurseShadowDOM(
+  root: Document | ShadowRoot,
+  seen: Set<HTMLElement>,
+  results: HTMLElement[],
+): void {
+  for (const el of root.querySelectorAll("*")) {
+    if (el.shadowRoot) {
+      collectClickTargetsFromRoot(el.shadowRoot, seen, results);
+    }
+  }
 }
 
 function collectClickTargetsFromRoot(
@@ -135,23 +161,16 @@ function collectClickTargetsFromRoot(
   results: HTMLElement[],
 ): void {
   try {
-    const candidates = root.querySelectorAll<HTMLElement>(
+    for (const el of root.querySelectorAll<HTMLElement>(
       CLICKABLE_CANDIDATES_SELECTOR,
-    );
-
-    for (const el of candidates) {
+    )) {
       if (seen.has(el)) continue;
       seen.add(el);
       if (!shouldIncludeClickTarget(el)) continue;
       results.push(el);
     }
 
-    // Recurse into shadow DOM
-    for (const el of root.querySelectorAll("*")) {
-      if (el.shadowRoot) {
-        collectClickTargetsFromRoot(el.shadowRoot, seen, results);
-      }
-    }
+    recurseShadowDOM(root, seen, results);
   } catch (err) {
     console.warn("Jump: Error walking DOM:", err);
   }

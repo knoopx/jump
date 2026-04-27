@@ -1,7 +1,8 @@
 import {
   selectFirstFocusHintAndVerifyBar,
-  testFocusViaHint,
   testEnterClicksHighlighted,
+  testFocusViaHint,
+  withSelectedFocusHint,
 } from "../support/test-utils";
 
 describe("focus mode", () => {
@@ -10,14 +11,6 @@ describe("focus mode", () => {
       cy.visit("cypress/fixtures/focus-list.html");
       cy.loadExtension();
     });
-
-    function selectFirstFocusHintAndRun(testFn: (labels: string[]) => void) {
-      cy.pressCtrlShift("K");
-      cy.hintLabels().then((labels) => {
-        cy.typeHintSeq(labels[0]);
-        testFn(labels);
-      });
-    }
 
     describe("when activating with Ctrl+Shift+K", () => {
       it("then shows hints on each repeating item", () => {
@@ -36,14 +29,14 @@ describe("focus mode", () => {
       });
 
       it("then applies mute overlay to non-sibling content", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.wait(100);
           cy.muteStyleTag().should("not.be.null");
         });
       });
 
       it("then removes hint overlays", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.hintLabels().should("have.length", 0);
         });
       });
@@ -51,7 +44,7 @@ describe("focus mode", () => {
 
     describe("when navigating with j/k", () => {
       it("then j moves highlight to next sibling", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.get("li").eq(0).should("have.attr", "data-jump-focus");
           cy.pressKey("j");
           cy.get("li").eq(1).should("have.attr", "data-jump-focus");
@@ -59,7 +52,7 @@ describe("focus mode", () => {
       });
 
       it("then k moves highlight to previous sibling", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.pressKey("j");
           cy.pressKey("j");
           cy.pressKey("k");
@@ -68,21 +61,21 @@ describe("focus mode", () => {
       });
 
       it("then j does not go past last sibling", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           for (let i = 0; i < 20; i++) cy.pressKey("j");
           cy.get("li").last().should("have.attr", "data-jump-focus");
         });
       });
 
       it("then k does not go before first sibling", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           for (let i = 0; i < 20; i++) cy.pressKey("k");
           cy.get("li").first().should("have.attr", "data-jump-focus");
         });
       });
 
       it("then selector bar persists during navigation", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.selectorBar().should("not.be.null");
           cy.pressKey("j");
           cy.pressKey("j");
@@ -94,13 +87,13 @@ describe("focus mode", () => {
 
     describe("when pressing Enter", () => {
       it("then triggers click on highlighted element", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           testEnterClicksHighlighted();
         });
       });
 
       it("then exits focus mode", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.pressKey("Enter");
           cy.selectorBar().should("be.null");
           cy.highlightedElement().should("be.null");
@@ -111,21 +104,21 @@ describe("focus mode", () => {
 
     describe("when pressing Escape", () => {
       it("then removes selector bar", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.pressKey("Escape");
           cy.selectorBar().should("be.null");
         });
       });
 
       it("then removes highlight", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.pressKey("Escape");
           cy.highlightedElement().should("be.null");
         });
       });
 
       it("then removes mute overlay", () => {
-        selectFirstFocusHintAndRun(() => {
+        withSelectedFocusHint(() => {
           cy.pressKey("Escape");
           cy.muteStyleTag().should("be.null");
         });

@@ -34,13 +34,13 @@ function hasSharedClasses(el: HTMLElement): boolean {
   if (el.classList.length === 0) return false;
   const parent = el.parentElement;
   if (!parent) return false;
-  const tag = el.localName;
-  const siblings = [...parent.children].filter(
-    (c) => c !== el && c.localName === tag,
-  );
-  if (siblings.length === 0) return false;
+
+  const sameTagSiblings = [...parent.children].filter(
+    (c) => c !== el && c.localName === el.localName,
+  ) as HTMLElement[];
+
   for (const cls of el.classList) {
-    if (siblings.every((s) => s.classList.contains(cls))) return true;
+    if (sameTagSiblings.every((s) => s.classList.contains(cls))) return true;
   }
   return false;
 }
@@ -50,20 +50,37 @@ function shouldIncludeFocusableElement(el: HTMLElement): boolean {
   return true;
 }
 
-function shouldIncludeDivOrCustomElement(el: HTMLElement): boolean {
-  const isCustom = el.localName.includes("-");
-  const isDiv = el.localName === "div";
-
-  if (!isCustom && !isDiv) return false;
-
+function passesSizeAndViewportCheck(el: HTMLElement): boolean {
   const rect = el.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return false;
-  if (!rectIntersectsViewport(rect)) return false;
+  return rectIntersectsViewport(rect);
+}
 
-  if (isDiv) return hasSameTagSiblings(el) && hasSharedClasses(el);
-  if (isCustom) return hasSameTagSiblings(el);
+function isDivOrCustomElement(el: HTMLElement): boolean {
+  const name = el.localName;
+  return name === "div" || name.includes("-");
+}
 
-  return false;
+function shouldIncludeDivOrCustomElement(el: HTMLElement): boolean {
+  if (!isDivOrCustomElement(el)) return false;
+  if (!passesSizeAndViewportCheck(el)) return false;
+  if (!hasSameTagSiblings(el)) return false;
+  return el.localName === "div" ? hasSharedClasses(el) : true;
+}
+
+function collectBySelector<T extends HTMLElement>(
+  root: Document | ShadowRoot,
+  selector: string,
+  filter: (el: T) => boolean,
+  seen: Set<HTMLElement>,
+  results: HTMLElement[],
+): void {
+  for (const el of root.querySelectorAll<T>(selector)) {
+    if (seen.has(el)) continue;
+    if (!filter(el as T)) continue;
+    seen.add(el);
+    results.push(el);
+  }
 }
 
 function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
@@ -71,19 +88,20 @@ function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
   const results: HTMLElement[] = [];
 
   try {
-    for (const el of root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)) {
-      if (seen.has(el)) continue;
-      if (!shouldIncludeFocusableElement(el)) continue;
-      seen.add(el);
-      results.push(el);
-    }
-
-    for (const el of root.querySelectorAll<HTMLElement>("div, :defined")) {
-      if (seen.has(el)) continue;
-      if (!shouldIncludeDivOrCustomElement(el)) continue;
-      seen.add(el);
-      results.push(el);
-    }
+    collectBySelector(
+      root,
+      FOCUSABLE_SELECTOR,
+      shouldIncludeFocusableElement,
+      seen,
+      results,
+    );
+    collectBySelector(
+      root,
+      "div, :defined",
+      shouldIncludeDivOrCustomElement,
+      seen,
+      results,
+    );
   } catch (err) {
     console.warn("Jump: Error collecting focus targets:", err);
   }
@@ -91,20 +109,23 @@ function collectTargetsFromRoot(root: Document | ShadowRoot): HTMLElement[] {
   return results;
 }
 
+function addVisibleTargets(source: HTMLElement[], target: HTMLElement[]): void {
+  for (const el of source) {
+    if (isVisible(el) && !target.includes(el)) {
+      target.push(el);
+    }
+  }
+}
+
 export function collectFocusTargets(): HTMLElement[] {
   const elements: HTMLElement[] = [];
 
   try {
-    for (const el of collectTargetsFromRoot(document)) {
-      if (isVisible(el)) elements.push(el);
-    }
+    addVisibleTargets(collectTargetsFromRoot(document), elements);
 
     for (const el of document.querySelectorAll("*")) {
       if (el.shadowRoot) {
-        for (const target of collectTargetsFromRoot(el.shadowRoot)) {
-          if (isVisible(target) && !elements.includes(target))
-            elements.push(target);
-        }
+        addVisibleTargets(collectTargetsFromRoot(el.shadowRoot), elements);
       }
     }
   } catch (err) {
@@ -234,29 +255,63 @@ function suppress(e: KeyboardEvent): void {
   e.stopImmediatePropagation();
 }
 
+function handleNavigationKey(key: string): boolean {
+  if (key === "j" || key === "k") {
+    navigate(key === "j" ? 1 : -1);
+    return true;
+  }
+  return false;
+}
+
+function handleDepthKey(key: string): boolean {
+  if (key === "d" || key === "f") {
+    changeDepth(key === "d" ? 1 : -1);
+    return true;
+  }
+  return false;
+}
+
+const SPATIAL_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+]);
+
+function handleSpatialKey(key: string): boolean {
+  if (SPATIAL_KEYS.has(key)) {
+    navigateSpatial(key);
+    return true;
+  }
+  return false;
+}
+
+function handleEnterKey(): void {
+  const target = currentAnchor();
+  const cb = onExitCallback;
+  exitFocus();
+  cb?.(target);
+}
+
+function handleEscapeKey(): void {
+  const cb = onExitCallback;
+  exitFocus();
+  cb?.(null);
+}
+
 function onKeyDown(e: KeyboardEvent): void {
   suppress(e);
 
-  if (e.key === "j" || e.key === "k") {
-    navigate(e.key === "j" ? 1 : -1);
-  } else if (e.key === "d" || e.key === "f") {
-    changeDepth(e.key === "d" ? 1 : -1);
-  } else if (
-    e.key === "ArrowUp" ||
-    e.key === "ArrowDown" ||
-    e.key === "ArrowLeft" ||
-    e.key === "ArrowRight"
-  ) {
-    navigateSpatial(e.key);
-  } else if (e.key === "Enter") {
-    const target = currentAnchor();
-    const cb = onExitCallback;
-    exitFocus();
-    cb?.(target);
-  } else if (e.key === "Escape") {
-    const cb = onExitCallback;
-    exitFocus();
-    cb?.(null);
+  if (handleNavigationKey(e.key)) return;
+  if (handleDepthKey(e.key)) return;
+  if (handleSpatialKey(e.key)) return;
+  if (e.key === "Enter") {
+    handleEnterKey();
+    return;
+  }
+  if (e.key === "Escape") {
+    handleEscapeKey();
+    return;
   }
 }
 
@@ -319,6 +374,50 @@ function navigate(delta: number): void {
   showBar();
 }
 
+function isDirectionValid(key: string, dx: number, dy: number): boolean {
+  if (key === "ArrowUp") return dy < 0;
+  if (key === "ArrowDown") return dy > 0;
+  if (key === "ArrowLeft") return dx < 0;
+  if (key === "ArrowRight") return dx > 0;
+  return false;
+}
+
+function findBestSpatialTarget(
+  matches: HTMLElement[],
+  anchor: HTMLElement,
+  cx: number,
+  cy: number,
+  key: string,
+): HTMLElement | null {
+  let best: HTMLElement | null = null;
+  let bestDist = Infinity;
+
+  for (const el of matches) {
+    if (el === anchor) continue;
+    const r = el.getBoundingClientRect();
+    const ex = r.left + r.width / 2;
+    const ey = r.top + r.height / 2;
+    const dx = ex - cx;
+    const dy = ey - cy;
+
+    if (!isDirectionValid(key, dx, dy)) continue;
+
+    const dist = dx * dx + dy * dy;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = el;
+    }
+  }
+  return best;
+}
+
+function selectSpatialTarget(el: HTMLElement, level: DepthLevel): void {
+  level.anchor = el;
+  el.scrollIntoView({ block: "center" });
+  highlightAnchor(el);
+  showBar();
+}
+
 function navigateSpatial(key: string): void {
   const matches = focusMatches();
   const level = currentLevel();
@@ -327,37 +426,8 @@ function navigateSpatial(key: string): void {
   const cx = cur.left + cur.width / 2;
   const cy = cur.top + cur.height / 2;
 
-  let best: HTMLElement | null = null;
-  let bestDist = Infinity;
-
-  for (const el of matches) {
-    if (el === level.anchor) continue;
-    const r = el.getBoundingClientRect();
-    const ex = r.left + r.width / 2;
-    const ey = r.top + r.height / 2;
-    const dx = ex - cx;
-    const dy = ey - cy;
-
-    let valid = false;
-    if (key === "ArrowUp") valid = dy < 0;
-    else if (key === "ArrowDown") valid = dy > 0;
-    else if (key === "ArrowLeft") valid = dx < 0;
-    else if (key === "ArrowRight") valid = dx > 0;
-    if (!valid) continue;
-
-    const dist = dx * dx + dy * dy;
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = el;
-    }
-  }
-
-  if (best) {
-    level.anchor = best;
-    best.scrollIntoView({ block: "center" });
-    highlightAnchor(best);
-    showBar();
-  }
+  const best = findBestSpatialTarget(matches, level.anchor, cx, cy, key);
+  if (best) selectSpatialTarget(best, level);
 }
 
 function changeDepth(delta: number): void {

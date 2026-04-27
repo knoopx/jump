@@ -1,4 +1,3 @@
-// fallow-ignore-next-line unused-files
 import { collectClickTargets, simulateClick } from "@/lib/click";
 import {
   collectFocusTargets,
@@ -103,122 +102,141 @@ function handleBackspace(): void {
   filterHints(hints, typed);
 }
 
+function createCommandHandler() {
+  let lastCommandTime = 0;
+
+  return function handleCommand(command: string): void {
+    const now = Date.now();
+    if (now - lastCommandTime < 100) return;
+    lastCommandTime = now;
+
+    if (focusActive()) {
+      exitFocus();
+      syncModeAttr();
+    }
+    if (hintActive()) {
+      deactivateHints();
+    } else {
+      activateHints(command === "activate-click" ? "click" : "focus");
+    }
+  };
+}
+
+function installKeyboardListeners(handleCommand: (cmd: string) => void): void {
+  function suppress(e: KeyboardEvent): void {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+
+  function isModifierActive(e: KeyboardEvent): boolean {
+    return e.ctrlKey || e.altKey || e.metaKey;
+  }
+
+  function isJumpShortcut(e: KeyboardEvent): boolean {
+    if (e.altKey || e.metaKey) return false;
+    if (!e.ctrlKey || !e.shiftKey) return false;
+    return e.key === "J" || e.key === "K";
+  }
+
+  function handleShortcutKeydown(e: KeyboardEvent): boolean {
+    if (!isJumpShortcut(e)) return false;
+    suppress(e);
+    handleCommand(e.key === "J" ? "activate-click" : "activate-focus");
+    return true;
+  }
+
+  function handleHintKeydown(e: KeyboardEvent): void {
+    if (e.key === "Escape") {
+      suppress(e);
+      deactivateHints();
+      return;
+    }
+    if (e.key === "Backspace") {
+      suppress(e);
+      handleBackspace();
+      return;
+    }
+    if (e.key.length === 1 && !isModifierActive(e)) {
+      suppress(e);
+      handleKey(e.key.toLowerCase());
+    }
+  }
+
+  window.addEventListener(
+    "keydown",
+    (e) => {
+      if (handleShortcutKeydown(e)) return;
+      if (!hintActive()) return;
+      handleHintKeydown(e);
+    },
+    true,
+  );
+
+  window.addEventListener(
+    "keyup",
+    (e) => {
+      if (hintActive()) suppress(e);
+    },
+    true,
+  );
+
+  window.addEventListener(
+    "keypress",
+    (e) => {
+      if (hintActive()) suppress(e);
+    },
+    true,
+  );
+
+  window.addEventListener(
+    "beforeinput",
+    (e) => {
+      if (hintActive()) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    },
+    true,
+  );
+}
+
+function installMessageListener(handleCommand: (cmd: string) => void): void {
+  browser.runtime.onMessage.addListener((msg: { command: string }) => {
+    handleCommand(msg.command);
+  });
+}
+
+function installNavigationReset(): void {
+  let lastUrl = location.href;
+
+  function resetOnNavigation(): void {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      if (active || focusActive()) {
+        if (focusActive()) exitFocus();
+        deactivateHints();
+        syncModeAttr();
+      }
+    }
+  }
+
+  window.addEventListener("popstate", resetOnNavigation);
+  window.addEventListener("hashchange", resetOnNavigation);
+  const observer = new MutationObserver(resetOnNavigation);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-url", "href"],
+  });
+}
+
 export default defineContentScript({
   matches: ["<all_urls>"],
   runAt: "document_idle",
 
   main() {
-    let lastCommandTime = 0;
-
-    function handleCommand(command: string): void {
-      const now = Date.now();
-      if (now - lastCommandTime < 100) return;
-      lastCommandTime = now;
-
-      if (focusActive()) {
-        exitFocus();
-        syncModeAttr();
-      }
-      if (hintActive()) {
-        deactivateHints();
-      } else {
-        activateHints(command === "activate-click" ? "click" : "focus");
-      }
-    }
-
-    function suppress(e: KeyboardEvent): void {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-    }
-
-    window.addEventListener(
-      "keydown",
-      (e) => {
-        if (
-          (e.key === "J" || e.key === "K") &&
-          e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey
-        ) {
-          suppress(e);
-          handleCommand(e.key === "J" ? "activate-click" : "activate-focus");
-          return;
-        }
-
-        if (!hintActive()) return;
-
-        if (e.key === "Escape") {
-          suppress(e);
-          deactivateHints();
-          return;
-        }
-
-        if (e.key === "Backspace") {
-          suppress(e);
-          handleBackspace();
-          return;
-        }
-
-        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-          suppress(e);
-          handleKey(e.key.toLowerCase());
-        }
-      },
-      true,
-    );
-
-    window.addEventListener(
-      "keyup",
-      (e) => {
-        if (hintActive()) suppress(e);
-      },
-      true,
-    );
-
-    window.addEventListener(
-      "keypress",
-      (e) => {
-        if (hintActive()) suppress(e);
-      },
-      true,
-    );
-
-    window.addEventListener(
-      "beforeinput",
-      (e) => {
-        if (hintActive()) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        }
-      },
-      true,
-    );
-
-    browser.runtime.onMessage.addListener((msg: { command: string }) => {
-      handleCommand(msg.command);
-    });
-
-    // Handle SPA navigation by resetting state
-    let lastUrl = location.href;
-    const checkNavigation = () => {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        if (active || focusActive()) {
-          if (focusActive()) {
-            exitFocus();
-          }
-          deactivateHints();
-          syncModeAttr();
-        }
-      }
-    };
-    window.addEventListener("popstate", checkNavigation);
-    window.addEventListener("hashchange", checkNavigation);
-    const observer = new MutationObserver(checkNavigation);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-url", "href"],
-    });
+    const handleCommand = createCommandHandler();
+    installKeyboardListeners(handleCommand);
+    installMessageListener(handleCommand);
+    installNavigationReset();
   },
 });
